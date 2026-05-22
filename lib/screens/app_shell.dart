@@ -273,7 +273,7 @@ class _NavTarget {
 }
 
 const _navTargets = [
-  _NavTarget(Icons.park_outlined, Color(0xFF7AC974)),
+  _NavTarget(Icons.park_outlined, AppColors.biomeGreen),
   _NavTarget(Icons.flag_outlined, AppColors.popPurple),
   _NavTarget(Icons.check_box_outlined, AppColors.popPink),
   _NavTarget(Icons.menu_book_outlined, AppColors.popTeal),

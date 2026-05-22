@@ -1,9 +1,12 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/limits.dart';
 import '../data/database.dart';
+import '../widgets/char_counter.dart';
 import '../state/app_providers.dart';
 import '../theme/theme.dart';
 import '../widgets/confirm_dialog.dart';
@@ -449,7 +452,16 @@ class _TaskSheetState extends State<_TaskSheet> {
       setState(() => _titleError = true);
       return;
     }
+    if (title.characters.length > TextLimits.taskTitle) {
+      setState(() => _titleError = true);
+      _tooLong('Title', TextLimits.taskTitle);
+      return;
+    }
     final notes = _notes.text.trim().isEmpty ? null : _notes.text.trim();
+    if (notes != null && notes.characters.length > TextLimits.taskNotes) {
+      _tooLong('Notes', TextLimits.taskNotes);
+      return;
+    }
     if (widget.existing == null) {
       await widget.db.addTask(title, notes, _due);
     } else {
@@ -457,6 +469,12 @@ class _TaskSheetState extends State<_TaskSheet> {
     }
     if (mounted) Navigator.of(context).pop();
   }
+
+  void _tooLong(String field, int max) =>
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+            content: Text('$field must be $max characters or fewer.')));
 
   @override
   Widget build(BuildContext context) {
@@ -487,9 +505,11 @@ class _TaskSheetState extends State<_TaskSheet> {
                     style: AppType.label.copyWith(fontSize: 16),
                   ),
                   const SizedBox(height: 14),
-                  _field(_title, 'Title…', error: _titleError),
+                  _field(_title, 'Title…',
+                      error: _titleError, maxLength: TextLimits.taskTitle),
                   const SizedBox(height: 10),
-                  _field(_notes, 'Notes (optional)…', maxLines: 2),
+                  _field(_notes, 'Notes (optional)…',
+                      maxLines: 2, maxLength: TextLimits.taskNotes),
                   const SizedBox(height: 16),
                   Row(
                     children: [
@@ -573,8 +593,9 @@ class _TaskSheetState extends State<_TaskSheet> {
     String hint, {
     bool error = false,
     int maxLines = 1,
+    int? maxLength,
   }) {
-    return Container(
+    final box = Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       decoration: BoxDecoration(
         color: AppColors.cream,
@@ -587,6 +608,9 @@ class _TaskSheetState extends State<_TaskSheet> {
       child: TextField(
         controller: controller,
         maxLines: maxLines,
+        inputFormatters: maxLength == null
+            ? null
+            : [LengthLimitingTextInputFormatter(maxLength)],
         style: AppType.body,
         cursorColor: AppColors.popPurple,
         onChanged: error ? (_) => setState(() => _titleError = false) : null,
@@ -597,6 +621,20 @@ class _TaskSheetState extends State<_TaskSheet> {
           hintStyle: AppType.body.copyWith(color: AppColors.textMuted),
         ),
       ),
+    );
+    if (maxLength == null) return box;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        box,
+        Padding(
+          padding: const EdgeInsets.only(top: 3, right: 4),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: CharCounter(controller: controller, max: maxLength),
+          ),
+        ),
+      ],
     );
   }
 }

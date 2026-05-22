@@ -56,7 +56,7 @@ class _RadialMenu extends StatelessWidget {
     const petalSize = 56.0;
 
     const petals = [
-      _Petal('Bio', Icons.park_rounded, Color(0xFF7AC974), 0, 150),
+      _Petal('Bio', Icons.park_rounded, AppColors.biomeGreen, 0, 150),
       _Petal('SQ', Icons.flag_rounded, AppColors.popPurple, 1, 126),
       _Petal('Task', Icons.check_box_rounded, AppColors.popPink, 2, 102),
       _Petal('HJ', Icons.menu_book_rounded, AppColors.popTeal, 3, 78),
