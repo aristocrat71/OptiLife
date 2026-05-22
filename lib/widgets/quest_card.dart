@@ -78,28 +78,34 @@ class QuestCard extends StatelessWidget {
           style: AppType.caption.copyWith(color: AppColors.textMuted));
     }
     if (done) {
-      // Only the toggler changes — same shape/position as MARK, now a teal
-      // DONE state that toggles back off on tap. The card itself is unchanged.
-      return PopTappable(
-        onTap: onUndo,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 9),
-          decoration:
-              popSurface(fill: AppColors.positive, radius: AppRadii.md, stroke: 2.5),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.check_rounded, size: 16, color: AppColors.ink),
-            const SizedBox(width: 6),
-            Text('DONE', style: AppType.label.copyWith(fontSize: 15)),
-          ]),
+      // "Completed" label + a small "Not done?" undo button beside it.
+      return Row(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.check_circle_rounded,
+            size: 18, color: AppColors.positive),
+        const SizedBox(width: 6),
+        Text('Completed',
+            style: AppType.label
+                .copyWith(fontSize: 15, color: AppColors.positive)),
+        const SizedBox(width: 12),
+        PopTappable(
+          onTap: onUndo,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: popSurface(
+                fill: AppColors.haze, radius: AppRadii.pill, stroke: 2),
+            child: Text('Not done?',
+                style: AppType.label
+                    .copyWith(fontSize: 13, color: AppColors.ink)),
+          ),
         ),
-      );
+      ]);
     }
     return PopTappable(
       onTap: onMark,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 9),
         decoration: popSurface(fill: color, radius: AppRadii.md, stroke: 2.5),
-        child: Text('MARK', style: AppType.label.copyWith(fontSize: 15)),
+        child: Text('Done?', style: AppType.label.copyWith(fontSize: 15)),
       ),
     );
   }
