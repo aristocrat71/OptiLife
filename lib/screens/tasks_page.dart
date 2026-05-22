@@ -28,7 +28,11 @@ class TasksPage extends ConsumerWidget {
       children: [
         DayPager(
           padding: const EdgeInsets.fromLTRB(
-              AppSpace.screenGutter, 128, AppSpace.screenGutter, 24),
+            AppSpace.screenGutter,
+            128,
+            AppSpace.screenGutter,
+            24,
+          ),
           children: [
             DateDisplay(date: date),
             const SizedBox(height: 16),
@@ -36,8 +40,7 @@ class TasksPage extends ConsumerWidget {
             const SizedBox(height: 16),
             Expanded(
               child: tasksAsync.when(
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
+                loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, _) => Text('$e', style: AppType.body),
                 data: (list) => _TaskList(list: list, readOnly: isPast),
               ),
@@ -61,19 +64,26 @@ class TasksPage extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.end,
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Tasks', style: AppType.display),
-          const SizedBox(height: 3),
-          Container(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Tasks', style: AppType.display),
+            const SizedBox(height: 3),
+            Container(
               width: 90,
               height: 5,
               decoration: BoxDecoration(
-                  color: AppColors.popPurple,
-                  borderRadius: AppRadii.r(AppRadii.pill))),
-        ]),
+                color: AppColors.popPurple,
+                borderRadius: AppRadii.r(AppRadii.pill),
+              ),
+            ),
+          ],
+        ),
         if (total > 0)
-          Text('$done of $total done',
-              style: AppType.label.copyWith(fontSize: 14)),
+          Text(
+            '$done of $total done',
+            style: AppType.label.copyWith(fontSize: 14),
+          ),
       ],
     );
   }
@@ -90,8 +100,9 @@ class _TaskList extends ConsumerWidget {
     if (list.isEmpty) {
       return _DesertEmpty(
         offToday: !isToday,
-        onWarp: () => ref.read(selectedDateProvider.notifier).state =
-            dateOnly(DateTime.now()),
+        onWarp: () => ref.read(selectedDateProvider.notifier).state = dateOnly(
+          DateTime.now(),
+        ),
         onRepeat: readOnly
             ? null
             : () async {
@@ -101,8 +112,11 @@ class _TaskList extends ConsumerWidget {
                 if (n == 0 && context.mounted) {
                   ScaffoldMessenger.of(context)
                     ..hideCurrentSnackBar()
-                    ..showSnackBar(const SnackBar(
-                        content: Text('No tasks yesterday to repeat.')));
+                    ..showSnackBar(
+                      const SnackBar(
+                        content: Text('No tasks yesterday to repeat.'),
+                      ),
+                    );
                 }
               },
       );
@@ -116,24 +130,35 @@ class _TaskList extends ConsumerWidget {
         if (active.isEmpty && done.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: Column(children: [
-              Text('The coast is clear',
-                  style: AppType.body.copyWith(color: AppColors.textMuted)),
-              const SizedBox(height: 2),
-              Text('[Immediately gets crushed by an asteroid]',
+            child: Column(
+              children: [
+                Text(
+                  'The coast is clear',
+                  style: AppType.body.copyWith(color: AppColors.textMuted),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '[Immediately gets crushed by an asteroid]',
                   textAlign: TextAlign.center,
                   style: AppType.caption.copyWith(
-                      color: AppColors.textMuted,
-                      fontStyle: FontStyle.italic)),
-            ]),
+                    color: AppColors.textMuted,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
           ),
         for (final t in active) _TaskRow(task: t, readOnly: readOnly),
         if (done.isNotEmpty) ...[
           Padding(
             padding: const EdgeInsets.fromLTRB(2, 8, 0, 10),
-            child: Text('✓ DONE (${done.length})',
-                style: AppType.label
-                    .copyWith(fontSize: 13, color: AppColors.textMuted)),
+            child: Text(
+              'DONE (${done.length})',
+              style: AppType.label.copyWith(
+                fontSize: 13,
+                color: AppColors.textMuted,
+              ),
+            ),
           ),
           for (final t in done) _TaskRow(task: t, readOnly: readOnly),
         ],
@@ -187,23 +212,40 @@ class _TaskRow extends ConsumerWidget {
                 ),
                 if (hasDesc) ...[
                   const SizedBox(height: 2),
-                  Text(task.description!,
-                      style: AppType.caption
-                          .copyWith(color: AppColors.textMuted)),
+                  Text(
+                    task.description!,
+                    style: AppType.caption.copyWith(color: AppColors.textMuted),
+                  ),
                 ],
               ],
             ),
           ),
-          // Bin at the right end deletes the task (separate hit zone).
+          // Edit (pencil) + delete (bin) at the right end — separate hit zones.
           if (!readOnly) ...[
-            const SizedBox(width: 6),
+            const SizedBox(width: 4),
+            GestureDetector(
+              onTap: () => openTaskSheet(context, ref, task),
+              behavior: HitTestBehavior.opaque,
+              child: const Padding(
+                padding: EdgeInsets.all(4),
+                child: Icon(
+                  Icons.edit_outlined,
+                  size: 21,
+                  color: AppColors.ink,
+                ),
+              ),
+            ),
+            const SizedBox(width: 2),
             GestureDetector(
               onTap: () => ref.read(databaseProvider).deleteTask(task.id),
               behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Icon(Icons.delete_outline_rounded,
-                    size: 22, color: AppColors.negative),
+              child: const Padding(
+                padding: EdgeInsets.all(4),
+                child: Icon(
+                  Icons.delete_outline_rounded,
+                  size: 21,
+                  color: AppColors.negative,
+                ),
               ),
             ),
           ],
@@ -211,19 +253,18 @@ class _TaskRow extends ConsumerWidget {
       ),
     );
 
-    if (readOnly) return content;
-
-    return PopTappable(
-      onTap: () => openTaskSheet(context, ref, task),
-      child: content,
-    );
+    // Row is no longer tappable-to-edit; use the pencil.
+    return content;
   }
 }
 
 /// Chunky rounded checkbox. Checked = `popPurple` (NOT teal — tasks earn no LE).
 class _Checkbox extends StatelessWidget {
-  const _Checkbox(
-      {required this.done, required this.readOnly, required this.onTap});
+  const _Checkbox({
+    required this.done,
+    required this.readOnly,
+    required this.onTap,
+  });
   final bool done;
   final bool readOnly;
   final VoidCallback onTap;
@@ -240,7 +281,9 @@ class _Checkbox extends StatelessWidget {
         color: done ? AppColors.popPurple : Colors.transparent,
         borderRadius: AppRadii.r(AppRadii.sm),
         border: Border.all(
-            color: readOnly ? AppColors.catNormal : AppColors.ink, width: 2.5),
+          color: readOnly ? AppColors.catNormal : AppColors.ink,
+          width: 2.5,
+        ),
       ),
       child: done
           ? const Icon(Icons.check_rounded, size: 18, color: Colors.white)
@@ -279,24 +322,42 @@ class _Fab extends StatelessWidget {
   }
 }
 
-/// Opens the add/edit task bottom sheet.
+/// Opens the add/edit task modal, centered with the shared pop entrance.
 Future<void> openTaskSheet(
-    BuildContext context, WidgetRef ref, TaskRow? existing) {
-  return showModalBottomSheet(
+  BuildContext context,
+  WidgetRef ref,
+  TaskRow? existing,
+) {
+  return showGeneralDialog<void>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => _TaskSheet(
+    barrierDismissible: true,
+    barrierLabel: 'Task',
+    barrierColor: AppColors.ink.withValues(alpha: AppZ.scrim),
+    transitionDuration: AppMotion.pop,
+    pageBuilder: (_, _, _) => _TaskSheet(
       db: ref.read(databaseProvider),
       existing: existing,
       initialDate: existing?.dueDate ?? ref.read(selectedDateProvider),
     ),
+    transitionBuilder: (_, anim, _, child) {
+      final curved = CurvedAnimation(parent: anim, curve: AppMotion.curvePop);
+      return FadeTransition(
+        opacity: anim,
+        child: ScaleTransition(
+          scale: Tween(begin: 0.7, end: 1.0).animate(curved),
+          child: child,
+        ),
+      );
+    },
   );
 }
 
 class _TaskSheet extends StatefulWidget {
-  const _TaskSheet(
-      {required this.db, required this.existing, required this.initialDate});
+  const _TaskSheet({
+    required this.db,
+    required this.existing,
+    required this.initialDate,
+  });
   final AppDatabase db;
   final TaskRow? existing;
   final DateTime initialDate;
@@ -306,16 +367,26 @@ class _TaskSheet extends StatefulWidget {
 }
 
 class _TaskSheetState extends State<_TaskSheet> {
-  late final _title =
-      TextEditingController(text: widget.existing?.title ?? '');
-  late final _notes =
-      TextEditingController(text: widget.existing?.description ?? '');
+  late final _title = TextEditingController(text: widget.existing?.title ?? '');
+  late final _notes = TextEditingController(
+    text: widget.existing?.description ?? '',
+  );
   late DateTime _due = widget.initialDate;
   bool _titleError = false;
 
   static const _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   @override
@@ -325,8 +396,9 @@ class _TaskSheetState extends State<_TaskSheet> {
     super.dispose();
   }
 
-  String get _dueLabel =>
-      sameDay(_due, DateTime.now()) ? 'Today' : '${_due.day} ${_months[_due.month - 1]}';
+  String get _dueLabel => sameDay(_due, DateTime.now())
+      ? 'Today'
+      : '${_due.day} ${_months[_due.month - 1]}';
 
   Future<void> _pickDue() async {
     final now = DateTime.now();
@@ -343,7 +415,10 @@ class _TaskSheetState extends State<_TaskSheet> {
             width: (MediaQuery.of(ctx).size.width - 80).clamp(280.0, 360.0),
             padding: const EdgeInsets.fromLTRB(14, 16, 14, 18),
             decoration: popSurface(
-                fill: AppColors.paper, radius: AppRadii.lg, stroke: 3),
+              fill: AppColors.paper,
+              radius: AppRadii.lg,
+              stroke: 3,
+            ),
             child: PopCalendar(
               selectedDate: _due,
               firstDate: DateTime(now.year - 1),
@@ -358,7 +433,9 @@ class _TaskSheetState extends State<_TaskSheet> {
         return FadeTransition(
           opacity: anim,
           child: ScaleTransition(
-              scale: Tween(begin: 0.7, end: 1.0).animate(curved), child: child),
+            scale: Tween(begin: 0.7, end: 1.0).animate(curved),
+            child: child,
+          ),
         );
       },
     );
@@ -389,109 +466,141 @@ class _TaskSheetState extends State<_TaskSheet> {
   Widget build(BuildContext context) {
     final editing = widget.existing != null;
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Container(
-        padding: EdgeInsets.fromLTRB(
-            20, 12, 20, 24 + MediaQuery.of(context).padding.bottom),
-        decoration: const BoxDecoration(
-          color: AppColors.paper,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          border: Border(
-            top: BorderSide(color: AppColors.ink, width: 2.5),
-            left: BorderSide(color: AppColors.ink, width: 2.5),
-            right: BorderSide(color: AppColors.ink, width: 2.5),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 44,
-                height: 5,
-                decoration: BoxDecoration(
-                    color: AppColors.haze,
-                    borderRadius: AppRadii.r(AppRadii.pill)),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Center(
+        // Centers when it fits; scrolls if the keyboard squeezes it.
+        child: SingleChildScrollView(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 32),
+              padding: const EdgeInsets.fromLTRB(22, 20, 22, 22),
+              decoration: popSurface(
+                fill: AppColors.paper,
+                radius: AppRadii.lg,
+                stroke: 3,
               ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(editing ? 'EDIT TASK' : 'NEW TASK',
-                    style: AppType.label.copyWith(fontSize: 16)),
-                if (editing)
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        editing ? 'EDIT TASK' : 'NEW TASK',
+                        style: AppType.label.copyWith(fontSize: 16),
+                      ),
+                      if (editing)
+                        PopTappable(
+                          onTap: _delete,
+                          child: const Icon(
+                            Icons.delete_outline_rounded,
+                            size: 24,
+                            color: AppColors.negative,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  _field(_title, 'Title…', error: _titleError),
+                  const SizedBox(height: 10),
+                  _field(_notes, 'Notes (optional)…', maxLines: 2),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Text(
+                        'For the day',
+                        style: AppType.label.copyWith(
+                          fontSize: 14,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      PopTappable(
+                        onTap: _pickDue,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          decoration: popSurface(
+                            fill: AppColors.haze,
+                            radius: AppRadii.pill,
+                            stroke: 2,
+                            shadow: false,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.calendar_today_rounded,
+                                size: 15,
+                                color: AppColors.ink,
+                              ),
+                              const SizedBox(width: 7),
+                              Text(
+                                _dueLabel,
+                                style: AppType.label.copyWith(fontSize: 14),
+                              ),
+                              const Icon(
+                                Icons.arrow_drop_down_rounded,
+                                size: 20,
+                                color: AppColors.ink,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
                   PopTappable(
-                    onTap: _delete,
-                    child: const Icon(Icons.delete_outline_rounded,
-                        size: 24, color: AppColors.negative),
+                    onTap: _submit,
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      alignment: Alignment.center,
+                      decoration: popSurface(
+                        fill: AppColors.popPink,
+                        radius: AppRadii.md,
+                        stroke: 2.5,
+                      ),
+                      child: Text(
+                        editing ? 'SAVE' : 'ADD TASK  ＋',
+                        style: AppType.label.copyWith(
+                          fontSize: 16,
+                          color: AppColors.cream,
+                        ),
+                      ),
+                    ),
                   ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            _field(_title, 'Title…', error: _titleError),
-            const SizedBox(height: 10),
-            _field(_notes, 'Notes (optional)…', maxLines: 2),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Text('For the day',
-                    style: AppType.label
-                        .copyWith(fontSize: 14, color: AppColors.textMuted)),
-                const SizedBox(width: 12),
-                PopTappable(
-                  onTap: _pickDue,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
-                    decoration: popSurface(
-                        fill: AppColors.haze,
-                        radius: AppRadii.pill,
-                        stroke: 2,
-                        shadow: false),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      const Icon(Icons.calendar_today_rounded,
-                          size: 15, color: AppColors.ink),
-                      const SizedBox(width: 7),
-                      Text(_dueLabel,
-                          style: AppType.label.copyWith(fontSize: 14)),
-                      const Icon(Icons.arrow_drop_down_rounded,
-                          size: 20, color: AppColors.ink),
-                    ]),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            PopTappable(
-              onTap: _submit,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                alignment: Alignment.center,
-                decoration: popSurface(
-                    fill: AppColors.popPink, radius: AppRadii.md, stroke: 2.5),
-                child: Text(editing ? 'SAVE' : 'ADD TASK  ＋',
-                    style: AppType.label
-                        .copyWith(fontSize: 16, color: AppColors.cream)),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _field(TextEditingController controller, String hint,
-      {bool error = false, int maxLines = 1}) {
+  Widget _field(
+    TextEditingController controller,
+    String hint, {
+    bool error = false,
+    int maxLines = 1,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       decoration: BoxDecoration(
         color: AppColors.cream,
         borderRadius: AppRadii.r(AppRadii.md),
         border: Border.all(
-            color: error ? AppColors.negative : AppColors.ink, width: 2),
+          color: error ? AppColors.negative : AppColors.ink,
+          width: 2,
+        ),
       ),
       child: TextField(
         controller: controller,
@@ -513,8 +622,11 @@ class _TaskSheetState extends State<_TaskSheet> {
 /// Empty-list scene: a tumbleweed rolling through wind, "It's highhhh
 /// noooonnn", and (off-today) a Warp to Present button.
 class _DesertEmpty extends StatelessWidget {
-  const _DesertEmpty(
-      {required this.offToday, required this.onWarp, this.onRepeat});
+  const _DesertEmpty({
+    required this.offToday,
+    required this.onWarp,
+    this.onRepeat,
+  });
   final bool offToday;
   final VoidCallback onWarp;
   final VoidCallback? onRepeat;
@@ -527,26 +639,43 @@ class _DesertEmpty extends StatelessWidget {
         children: [
           const _FloatingLeaf(),
           const SizedBox(height: 10),
-          Text("It's a bit too quiet out here...",
-              textAlign: TextAlign.center,
-              style: AppType.display
-                  .copyWith(fontSize: 22, color: AppColors.textMuted)),
+          Text(
+            "It's a bit too quiet out here...",
+            textAlign: TextAlign.center,
+            style: AppType.display.copyWith(
+              fontSize: 22,
+              color: AppColors.textMuted,
+            ),
+          ),
           if (onRepeat != null) ...[
             const SizedBox(height: 18),
             PopTappable(
               onTap: onRepeat,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 11,
+                ),
                 decoration: popSurface(
-                    fill: AppColors.paper, radius: AppRadii.pill, stroke: 2.5),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.replay_rounded,
-                      size: 17, color: AppColors.ink),
-                  const SizedBox(width: 8),
-                  Text('Repeat yesterday',
-                      style: AppType.label.copyWith(fontSize: 14)),
-                ]),
+                  fill: AppColors.paper,
+                  radius: AppRadii.pill,
+                  stroke: 2.5,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.replay_rounded,
+                      size: 17,
+                      color: AppColors.ink,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Repeat yesterday',
+                      style: AppType.label.copyWith(fontSize: 14),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -571,9 +700,10 @@ class _FloatingLeaf extends StatefulWidget {
 
 class _FloatingLeafState extends State<_FloatingLeaf>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(seconds: 5))
-        ..repeat();
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 5),
+  )..repeat();
 
   @override
   void dispose() {
@@ -599,9 +729,13 @@ class _FloatingLeafState extends State<_FloatingLeaf>
                   left: tx,
                   top: 18 - wobble * 8, // gentle bob
                   child: Transform.rotate(
-                    angle: wobble * 0.35, // tilt — a leaf turns more in the wind
-                    child: Icon(Icons.eco,
-                        size: 42, color: AppColors.ink.withValues(alpha: 0.35)),
+                    angle:
+                        wobble * 0.35, // tilt — a leaf turns more in the wind
+                    child: Icon(
+                      Icons.eco,
+                      size: 42,
+                      color: AppColors.ink.withValues(alpha: 0.35),
+                    ),
                   ),
                 ),
               ],
