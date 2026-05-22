@@ -47,7 +47,8 @@ class _RadialMenu extends StatelessWidget {
     final media = MediaQuery.of(context);
     final cx = media.size.width / 2;
     final cy = media.padding.top + 95;
-    const r = 150.0;
+    const r = 165.0; // larger radius → more breathing room between petals
+    const petalSize = 56.0;
 
     const petals = [
       _Petal('Bio', Icons.park_rounded, Color(0xFF7AC974), 0, 150),
@@ -64,60 +65,38 @@ class _RadialMenu extends StatelessWidget {
       children: [
         for (final p in petals)
           Positioned(
-            left: cx + r * math.cos(p.angle * math.pi / 180) - 32,
-            top: cy + r * math.sin(p.angle * math.pi / 180) - 32,
-            child: _PetalButton(petal: p),
+            left: cx + r * math.cos(p.angle * math.pi / 180) - petalSize / 2,
+            top: cy + r * math.sin(p.angle * math.pi / 180) - petalSize / 2,
+            child: _PetalButton(petal: p, size: petalSize),
           ),
-        Positioned(
-          bottom: 54,
-          left: 0,
-          right: 0,
-          child: Center(
-            child: Text('tap anywhere to close',
-                style: AppType.body
-                    .copyWith(color: AppColors.cream.withValues(alpha: 0.7))),
-          ),
-        ),
       ],
     );
   }
 }
 
 class _PetalButton extends StatelessWidget {
-  const _PetalButton({required this.petal});
+  const _PetalButton({required this.petal, required this.size});
   final _Petal petal;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
     return Opacity(
       opacity: petal.enabled ? 1 : 0.45,
-      child: SizedBox(
-        width: 64,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            PopTappable(
-              onTap: petal.enabled
-                  ? () => Navigator.of(context).pop(petal.index)
-                  : null,
-              child: Container(
-                width: 62,
-                height: 62,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: petal.color,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.ink, width: 2.5),
-                  boxShadow: AppShadows.card,
-                ),
-                child: Icon(petal.icon, color: Colors.white, size: 26),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(petal.enabled ? petal.label : '${petal.label} · soon',
-                style: AppType.label
-                    .copyWith(fontSize: 12, color: AppColors.cream)),
-          ],
+      child: PopTappable(
+        onTap:
+            petal.enabled ? () => Navigator.of(context).pop(petal.index) : null,
+        child: Container(
+          width: size,
+          height: size,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: petal.color,
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.ink, width: 2.5),
+            boxShadow: AppShadows.card,
+          ),
+          child: Icon(petal.icon, color: Colors.white, size: 26),
         ),
       ),
     );

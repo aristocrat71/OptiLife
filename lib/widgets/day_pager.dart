@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../state/app_providers.dart';
+import '../theme/theme.dart';
 
 /// Vertical drag = day change (Design Doc §5.4). Dragging **down** goes to the
 /// **previous** day; dragging **up** goes to the **next** day.
@@ -43,6 +44,7 @@ class _DayPagerState extends ConsumerState<DayPager> {
 
   @override
   Widget build(BuildContext context) {
+    final date = ref.watch(selectedDateProvider);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onVerticalDragStart: (_) {
@@ -61,11 +63,29 @@ class _DayPagerState extends ConsumerState<DayPager> {
         }
       },
       child: SizedBox.expand(
-        child: Padding(
-          padding: widget.padding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: widget.children,
+        // Keyed by the date so each day transitions in with a soft fade+settle.
+        // Same-date rebuilds (e.g. marking a quest) keep the key, so they don't
+        // animate — only an actual day change does.
+        child: AnimatedSwitcher(
+          duration: AppMotion.pop,
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeIn,
+          transitionBuilder: (child, anim) => FadeTransition(
+            opacity: anim,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                      begin: const Offset(0, 0.03), end: Offset.zero)
+                  .animate(anim),
+              child: child,
+            ),
+          ),
+          child: Padding(
+            key: ValueKey(date),
+            padding: widget.padding,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: widget.children,
+            ),
           ),
         ),
       ),
