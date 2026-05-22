@@ -126,6 +126,7 @@ class _SideQuestPageState extends ConsumerState<SideQuestPage> {
         if (!isPast && !isFuture) ...[
           const SizedBox(height: 16),
           _rerollButton(),
+          const SizedBox(height: 30), // lift it up off the bottom a bit
         ],
       ],
     );
@@ -160,14 +161,14 @@ class _SideQuestPageState extends ConsumerState<SideQuestPage> {
     return Center(
       child: PopTappable(
         onTap: _confirmReroll,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 34, vertical: 18),
-          decoration:
-              popSurface(fill: AppColors.energy, radius: AppRadii.lg, stroke: 3),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text('REROLL', style: AppType.label.copyWith(fontSize: 20)),
-            const SizedBox(height: 10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
             const _RerollDie(),
+            const SizedBox(width: 9),
+            Text('REROLL',
+                style: AppType.label
+                    .copyWith(fontSize: 19, color: AppColors.popCoral)),
           ]),
         ),
       ),
@@ -366,7 +367,8 @@ class _RerollDieState extends State<_RerollDie>
           offset: Offset(0, bob),
           child: Transform.rotate(
             angle: rot,
-            child: const Icon(Icons.casino_rounded, size: 32, color: AppColors.ink),
+            child: const Icon(Icons.casino_rounded,
+                size: 30, color: AppColors.popCoral),
           ),
         );
       },
@@ -409,19 +411,8 @@ class _RerollConfirm extends StatelessWidget {
                       style: AppType.label
                           .copyWith(fontSize: 13, color: AppColors.textMuted)),
                   const SizedBox(width: 8),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
-                    decoration: BoxDecoration(
-                        color: AppColors.ink,
-                        borderRadius: AppRadii.r(AppRadii.sm)),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      Text('10',
-                          style: AppType.label
-                              .copyWith(fontSize: 15, color: AppColors.cream)),
-                      const Icon(Icons.bolt, size: 14, color: AppColors.energy),
-                    ]),
-                  ),
+                  Text('10', style: AppType.label.copyWith(fontSize: 16)),
+                  const Icon(Icons.bolt, size: 16, color: AppColors.energy),
                 ],
               ),
               const SizedBox(height: 22),

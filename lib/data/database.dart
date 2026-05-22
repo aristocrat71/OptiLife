@@ -27,13 +27,26 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) async {
           await m.createAll();
           await _seed();
+        },
+        onUpgrade: (m, from, to) async {
+          if (from < 3) {
+            // Reset quests/day to the default 3 and clear today's cached roll
+            // so it re-rolls with the right count. (Bridges the temporary
+            // 6-quest experiment; safe to squash before release.)
+            await (update(settings)..where((t) => t.id.equals(1)))
+                .write(const SettingsCompanion(questsPerDay: Value(3)));
+            final now = DateTime.now();
+            final today = DateTime(now.year, now.month, now.day);
+            await (delete(dailyQuestRolls)..where((t) => t.date.equals(today)))
+                .go();
+          }
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
