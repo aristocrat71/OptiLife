@@ -134,10 +134,10 @@ class _QuestsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final quests = ref.watch(workshopQuestsProvider);
-    final category = ref.watch(questCategoryFilterProvider);
-    final source = ref.watch(questSourceFilterProvider);
+    final categories = ref.watch(questCategoryFilterProvider);
+    final sources = ref.watch(questSourceFilterProvider);
     final searching = ref.watch(questSearchProvider).trim().isNotEmpty;
-    final filtersActive = category != null || source != null;
+    final filtersActive = categories.isNotEmpty || sources.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -256,10 +256,22 @@ class _QuestFiltersSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final category = ref.watch(questCategoryFilterProvider);
-    final source = ref.watch(questSourceFilterProvider);
+    final categories = ref.watch(questCategoryFilterProvider);
+    final sources = ref.watch(questSourceFilterProvider);
     final catNotifier = ref.read(questCategoryFilterProvider.notifier);
     final srcNotifier = ref.read(questSourceFilterProvider.notifier);
+
+    void toggleCat(QuestCategory c) {
+      final next = {...categories};
+      next.contains(c) ? next.remove(c) : next.add(c);
+      catNotifier.state = next;
+    }
+
+    void toggleSrc(QuestSource s) {
+      final next = {...sources};
+      next.contains(s) ? next.remove(s) : next.add(s);
+      srcNotifier.state = next;
+    }
 
     return Center(
       child: Material(
@@ -277,11 +289,11 @@ class _QuestFiltersSheet extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('FILTERS', style: AppType.label.copyWith(fontSize: 16)),
-                  if (category != null || source != null)
+                  if (categories.isNotEmpty || sources.isNotEmpty)
                     PopTappable(
                       onTap: () {
-                        catNotifier.state = null;
-                        srcNotifier.state = null;
+                        catNotifier.state = const {};
+                        srcNotifier.state = const {};
                       },
                       child: Text('Clear',
                           style: AppType.label.copyWith(
@@ -293,6 +305,7 @@ class _QuestFiltersSheet extends ConsumerWidget {
               Text('Category',
                   style: AppType.caption.copyWith(color: AppColors.textMuted)),
               const SizedBox(height: 8),
+              // Multi-select: empty set = all. "All" clears the set.
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -300,15 +313,15 @@ class _QuestFiltersSheet extends ConsumerWidget {
                   _FilterChip(
                     label: 'All',
                     color: AppColors.popPurple,
-                    selected: category == null,
-                    onTap: () => catNotifier.state = null,
+                    selected: categories.isEmpty,
+                    onTap: () => catNotifier.state = const {},
                   ),
                   for (final c in _questCats)
                     _FilterChip(
                       label: _catLabel(c),
                       color: AppColors.category(c),
-                      selected: category == c,
-                      onTap: () => catNotifier.state = c,
+                      selected: categories.contains(c),
+                      onTap: () => toggleCat(c),
                     ),
                 ],
               ),
@@ -323,20 +336,20 @@ class _QuestFiltersSheet extends ConsumerWidget {
                   _FilterChip(
                     label: 'All',
                     color: AppColors.popPurple,
-                    selected: source == null,
-                    onTap: () => srcNotifier.state = null,
+                    selected: sources.isEmpty,
+                    onTap: () => srcNotifier.state = const {},
                   ),
                   _FilterChip(
                     label: 'Preset',
                     color: AppColors.popPurple,
-                    selected: source == QuestSource.preset,
-                    onTap: () => srcNotifier.state = QuestSource.preset,
+                    selected: sources.contains(QuestSource.preset),
+                    onTap: () => toggleSrc(QuestSource.preset),
                   ),
                   _FilterChip(
                     label: 'Custom',
                     color: AppColors.popPurple,
-                    selected: source == QuestSource.user,
-                    onTap: () => srcNotifier.state = QuestSource.user,
+                    selected: sources.contains(QuestSource.user),
+                    onTap: () => toggleSrc(QuestSource.user),
                   ),
                 ],
               ),
