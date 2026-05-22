@@ -71,8 +71,11 @@ class _AppShellState extends ConsumerState<AppShell> {
         return FadeTransition(
           opacity: anim,
           child: ScaleTransition(
-            scale: Tween(begin: 0.7, end: 1.0).animate(curved),
-            child: child,
+            scale: Tween(begin: 0.5, end: 1.0).animate(curved),
+            child: RotationTransition(
+              turns: Tween(begin: -0.05, end: 0.0).animate(curved),
+              child: child,
+            ),
           ),
         );
       },
@@ -85,6 +88,34 @@ class _AppShellState extends ConsumerState<AppShell> {
   void _goToToday() =>
       ref.read(selectedDateProvider.notifier).state = dateOnly(DateTime.now());
 
+  /// Wraps a page so it tilts back in 3D, shrinks and fades as it slides away
+  /// from center — the deck flips like cards on a turntable while swiping.
+  Widget _depthPage(int index, Widget child) {
+    return AnimatedBuilder(
+      animation: _controller,
+      child: child,
+      builder: (context, child) {
+        var page = _index.toDouble();
+        if (_controller.hasClients && _controller.position.haveDimensions) {
+          page = _controller.page ?? page;
+        }
+        final t = (page - index).clamp(-1.0, 1.0);
+        final a = t.abs();
+        return Opacity(
+          opacity: (1 - 0.55 * a).clamp(0.0, 1.0),
+          child: Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, 0.0015) // perspective
+              ..rotateY(-0.55 * t) // tilt toward the incoming page
+              ..scaleByDouble(1 - 0.22 * a, 1 - 0.22 * a, 1, 1),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final app = ref.watch(appStateProvider);
@@ -94,10 +125,12 @@ class _AppShellState extends ConsumerState<AppShell> {
     return Scaffold(
       body: Stack(
         children: [
-          if (_index != 0)
-            Positioned.fill(
-              child: _LiquidBackground(fraction: leIntoLevel(le) / 50),
-            ),
+          // Persistent, independent backdrop: always the bottom layer, never
+          // inside the PageView, so horizontal swipes never move it. Sections
+          // with their own opaque world (Biome) simply paint over it.
+          Positioned.fill(
+            child: _LiquidBackground(fraction: leIntoLevel(le) / 50),
+          ),
           // Reserve the bottom band so page content never sits under the dots.
           Padding(
             padding:
@@ -105,11 +138,11 @@ class _AppShellState extends ConsumerState<AppShell> {
             child: PageView(
               controller: _controller,
               onPageChanged: (i) => setState(() => _index = i),
-              children: const [
-                BiomePage(),
-                SideQuestPage(),
-                TasksPage(),
-                JournalPage(),
+              children: [
+                _depthPage(0, const BiomePage()),
+                _depthPage(1, const SideQuestPage()),
+                _depthPage(2, const TasksPage()),
+                _depthPage(3, const JournalPage()),
               ],
             ),
           ),
