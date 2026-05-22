@@ -124,11 +124,48 @@ class _AppShellState extends ConsumerState<AppShell> {
     );
   }
 
+  /// The sticky date display, positioned where each page used to render it
+  /// (absolute top, tuned to clear the shell controls). Opacity tracks the
+  /// horizontal swipe so it dissolves on the way into Biome and is solid
+  /// elsewhere; a date change cross-fades the new day in.
+  Widget _stickyDate(DateTime date) {
+    return Positioned(
+      top: 128,
+      left: AppSpace.screenGutter,
+      child: IgnorePointer(
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            var page = _index.toDouble();
+            if (_controller.hasClients && _controller.position.haveDimensions) {
+              page = _controller.page ?? page;
+            }
+            return Opacity(opacity: page.clamp(0.0, 1.0), child: child);
+          },
+          child: AnimatedSwitcher(
+            duration: AppMotion.pop,
+            switchInCurve: AppMotion.curvePop,
+            transitionBuilder: (child, anim) => FadeTransition(
+              opacity: anim,
+              child: SlideTransition(
+                position: Tween(begin: const Offset(0, 0.22), end: Offset.zero)
+                    .animate(anim),
+                child: child,
+              ),
+            ),
+            child: DateDisplay(key: ValueKey(date), date: date),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final app = ref.watch(appStateProvider);
     final le = app.asData?.value.lifetimeLe ?? 0;
     final isToday = ref.watch(isTodayProvider);
+    final date = ref.watch(selectedDateProvider);
 
     return Scaffold(
       body: Stack(
@@ -188,6 +225,10 @@ class _AppShellState extends ConsumerState<AppShell> {
               ),
             ),
           ),
+          // Sticky date: lives in the shell (not the PageView), so it stays put
+          // during horizontal swipes instead of tilting with the page deck. It
+          // fades out as you swipe toward Biome (index 0), which has no date.
+          _stickyDate(date),
           // Directional edge peeks replace the page dots: the adjacent pages'
           // icons hug the bottom corners (tap to glide there).
           if (_index > 0)
