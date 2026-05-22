@@ -86,22 +86,26 @@ class _SideQuestPageState extends ConsumerState<SideQuestPage> {
                       isPast
                           ? 'No quests were rolled this day.'
                           : 'No active quests — add some in the Workshop.')
-                  : ListView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: EdgeInsets.zero,
-                      children: [
-                        for (final rq in list) ...[
-                          QuestCard(
-                            rolled: rq,
-                            readOnly: isPast,
-                            onMark: () => _onMark(rq.quest.id),
-                            onUndo: () => ref
-                                .read(gameRepositoryProvider)
-                                .unmarkQuest(rq.quest.id),
-                          ),
-                          const SizedBox(height: 14),
+                  : _fadeEdges(
+                      ListView(
+                        physics: const BouncingScrollPhysics(),
+                        // Top breathing room + bottom room so the last card can
+                        // scroll up clear of the fade.
+                        padding: const EdgeInsets.only(top: 2, bottom: 36),
+                        children: [
+                          for (final rq in list) ...[
+                            QuestCard(
+                              rolled: rq,
+                              readOnly: isPast,
+                              onMark: () => _onMark(rq.quest.id),
+                              onUndo: () => ref
+                                  .read(gameRepositoryProvider)
+                                  .unmarkQuest(rq.quest.id),
+                            ),
+                            const SizedBox(height: 14),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
             ),
           ),
@@ -167,6 +171,25 @@ class _SideQuestPageState extends ConsumerState<SideQuestPage> {
       ),
     );
   }
+
+  /// Softly fades the top & bottom edges of the scroll box to transparent so
+  /// cards melt into the background instead of being hard-clipped — and it
+  /// hints there's more to scroll. Bottom fade is stronger than the top.
+  Widget _fadeEdges(Widget child) => ShaderMask(
+        blendMode: BlendMode.dstIn,
+        shaderCallback: (rect) => const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.transparent,
+            Colors.white,
+            Colors.white,
+            Colors.transparent,
+          ],
+          stops: [0.0, 0.035, 0.85, 1.0],
+        ).createShader(rect),
+        child: child,
+      );
 
   Widget _empty(String emoji, String msg) => Padding(
         padding: const EdgeInsets.only(top: 48),
