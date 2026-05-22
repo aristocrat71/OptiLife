@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="62" height="84" viewBox="0 0 62 84">
+  <!-- PLACEHOLDER: night = moonlit plant. Base = (31,82). Replace in art pass. -->
+  <ellipse cx="31" cy="80" rx="17" ry="4.5" fill="#1A1626" opacity="0.16"/>
+  <rect x="27" y="50" width="8" height="28" rx="3" fill="#8A5A32" stroke="#1A1626" stroke-width="2.5"/>
+  <circle cx="31" cy="30" r="21" fill="#4361EE" stroke="#1A1626" stroke-width="2.8"/>
+  <path d="M37 20a10 10 0 1 0 0 20 12 12 0 0 1 0-20Z" fill="#FFF7EC"/>
+</svg>
