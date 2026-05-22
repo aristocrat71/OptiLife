@@ -1,0 +1,13 @@
+/// Input character caps for the CRUD editors + journal. Titles are also bounded
+/// by the Drift `withLength` constraints in `data/tables.dart` (200/200/300), so
+/// these tighter UI caps stay safely under the DB limits; descriptions/notes and
+/// the journal body have no DB limit, so these are purely UI guards.
+abstract final class TextLimits {
+  static const taskTitle = 100;
+  static const taskNotes = 200;
+  static const habitTitle = 20;
+  static const habitDescription = 100;
+  static const questTitle = 80;
+  static const questDescription = 200;
+  static const journalBody = 1000;
+}

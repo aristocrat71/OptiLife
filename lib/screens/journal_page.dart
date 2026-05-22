@@ -2,12 +2,15 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/limits.dart';
 import '../data/database.dart';
 import '../data/game_repository.dart';
 import '../state/app_providers.dart';
 import '../theme/theme.dart';
+import '../widgets/char_counter.dart';
 import '../widgets/day_pager.dart';
 import '../widgets/journal_style_sheet.dart';
 import '../widgets/level_up_overlay.dart';
@@ -392,7 +395,7 @@ class _HabitChip extends ConsumerWidget {
               _toggleDot(actionIcon),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Flexible(
             child: Text(
               habit.title,
@@ -548,23 +551,45 @@ class _JournalEditorState extends State<_JournalEditor> {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      controller: _controller,
-      onChanged: _onChanged,
-      maxLines: null,
-      expands: true,
-      textAlign: widget.textAlign,
-      keyboardType: TextInputType.multiline,
-      textCapitalization: TextCapitalization.sentences,
-      cursorColor: AppColors.popPurple,
-      style: AppType.journal(widget.font),
-      decoration: InputDecoration(
-        isCollapsed: true,
-        border: InputBorder.none,
-        hintText: 'What happened today?',
-        hintStyle: AppType.journal(widget.font)
-            .copyWith(color: AppColors.textMuted),
-      ),
+    return Stack(
+      children: [
+        TextField(
+          controller: _controller,
+          onChanged: _onChanged,
+          maxLines: null,
+          expands: true,
+          inputFormatters: [
+            LengthLimitingTextInputFormatter(TextLimits.journalBody),
+          ],
+          textAlign: widget.textAlign,
+          keyboardType: TextInputType.multiline,
+          textCapitalization: TextCapitalization.sentences,
+          cursorColor: AppColors.popPurple,
+          style: AppType.journal(widget.font),
+          decoration: InputDecoration(
+            // Leave room so the last line never hides under the counter.
+            contentPadding: const EdgeInsets.only(bottom: 22),
+            isCollapsed: true,
+            border: InputBorder.none,
+            hintText: 'What happened today?',
+            hintStyle: AppType.journal(widget.font)
+                .copyWith(color: AppColors.textMuted),
+          ),
+        ),
+        Positioned(
+          right: 0,
+          bottom: 0,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppColors.cream,
+              borderRadius: AppRadii.r(AppRadii.pill),
+            ),
+            child:
+                CharCounter(controller: _controller, max: TextLimits.journalBody),
+          ),
+        ),
+      ],
     );
   }
 }

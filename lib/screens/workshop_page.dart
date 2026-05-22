@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/limits.dart';
 import '../data/database.dart';
+import '../widgets/char_counter.dart';
 import '../state/app_providers.dart';
 import '../theme/theme.dart';
 import '../widgets/confirm_dialog.dart';
@@ -360,8 +363,10 @@ class _QuestFiltersSheet extends ConsumerWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 13),
                   alignment: Alignment.center,
+                  // Biome green so the confirm action reads distinctly from
+                  // the purple filter chips.
                   decoration: popSurface(
-                      fill: AppColors.popPurple,
+                      fill: AppColors.biomeGreen,
                       radius: AppRadii.md,
                       stroke: 2.5),
                   child: Text('DONE',
@@ -755,7 +760,16 @@ class _QuestSheetState extends ConsumerState<_QuestSheet> {
       setState(() => _titleError = true);
       return;
     }
+    if (title.characters.length > TextLimits.questTitle) {
+      setState(() => _titleError = true);
+      _tooLong('Title', TextLimits.questTitle);
+      return;
+    }
     final desc = _desc.text.trim().isEmpty ? null : _desc.text.trim();
+    if (desc != null && desc.characters.length > TextLimits.questDescription) {
+      _tooLong('Description', TextLimits.questDescription);
+      return;
+    }
     final db = ref.read(databaseProvider);
     if (widget.existing == null) {
       await db.addQuest(title, desc, _category);
@@ -764,6 +778,12 @@ class _QuestSheetState extends ConsumerState<_QuestSheet> {
     }
     if (mounted) Navigator.of(context).pop();
   }
+
+  void _tooLong(String field, int max) =>
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+            content: Text('$field must be $max characters or fewer.')));
 
   @override
   Widget build(BuildContext context) {
@@ -786,9 +806,11 @@ class _QuestSheetState extends ConsumerState<_QuestSheet> {
                   Text(editing ? 'EDIT QUEST' : 'NEW QUEST',
                       style: AppType.label.copyWith(fontSize: 16)),
                   const SizedBox(height: 14),
-                  _field(_title, 'Title…', error: _titleError),
+                  _field(_title, 'Title…',
+                      error: _titleError, maxLength: TextLimits.questTitle),
                   const SizedBox(height: 10),
-                  _field(_desc, 'Description (optional)…', maxLines: 2),
+                  _field(_desc, 'Description (optional)…',
+                      maxLines: 2, maxLength: TextLimits.questDescription),
                   const SizedBox(height: 16),
                   Text('Category',
                       style: AppType.caption
@@ -847,8 +869,8 @@ class _QuestSheetState extends ConsumerState<_QuestSheet> {
   }
 
   Widget _field(TextEditingController controller, String hint,
-      {bool error = false, int maxLines = 1}) {
-    return Container(
+      {bool error = false, int maxLines = 1, int? maxLength}) {
+    final box = Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       decoration: BoxDecoration(
         color: AppColors.cream,
@@ -859,6 +881,9 @@ class _QuestSheetState extends ConsumerState<_QuestSheet> {
       child: TextField(
         controller: controller,
         maxLines: maxLines,
+        inputFormatters: maxLength == null
+            ? null
+            : [LengthLimitingTextInputFormatter(maxLength)],
         style: AppType.body,
         cursorColor: AppColors.popPurple,
         textCapitalization: TextCapitalization.sentences,
@@ -870,6 +895,20 @@ class _QuestSheetState extends ConsumerState<_QuestSheet> {
           hintStyle: AppType.body.copyWith(color: AppColors.textMuted),
         ),
       ),
+    );
+    if (maxLength == null) return box;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        box,
+        Padding(
+          padding: const EdgeInsets.only(top: 3, right: 4),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: CharCounter(controller: controller, max: maxLength),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -972,7 +1011,16 @@ class _HabitSheetState extends ConsumerState<_HabitSheet> {
       setState(() => _titleError = true);
       return;
     }
+    if (title.characters.length > TextLimits.habitTitle) {
+      setState(() => _titleError = true);
+      _tooLong('Title', TextLimits.habitTitle);
+      return;
+    }
     final desc = _desc.text.trim().isEmpty ? null : _desc.text.trim();
+    if (desc != null && desc.characters.length > TextLimits.habitDescription) {
+      _tooLong('Description', TextLimits.habitDescription);
+      return;
+    }
     final db = ref.read(databaseProvider);
     if (widget.existing == null) {
       await db.addHabit(title, desc, _type);
@@ -981,6 +1029,12 @@ class _HabitSheetState extends ConsumerState<_HabitSheet> {
     }
     if (mounted) Navigator.of(context).pop();
   }
+
+  void _tooLong(String field, int max) =>
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+            content: Text('$field must be $max characters or fewer.')));
 
   @override
   Widget build(BuildContext context) {
@@ -1003,9 +1057,11 @@ class _HabitSheetState extends ConsumerState<_HabitSheet> {
                   Text(editing ? 'EDIT HABIT' : 'NEW HABIT',
                       style: AppType.label.copyWith(fontSize: 16)),
                   const SizedBox(height: 14),
-                  _field(_title, 'Title…', error: _titleError),
+                  _field(_title, 'Title…',
+                      error: _titleError, maxLength: TextLimits.habitTitle),
                   const SizedBox(height: 10),
-                  _field(_desc, 'Description (optional)…', maxLines: 2),
+                  _field(_desc, 'Description (optional)…',
+                      maxLines: 2, maxLength: TextLimits.habitDescription),
                   const SizedBox(height: 16),
                   Text('Type',
                       style: AppType.caption
@@ -1112,8 +1168,8 @@ class _HabitSheetState extends ConsumerState<_HabitSheet> {
   }
 
   Widget _field(TextEditingController controller, String hint,
-      {bool error = false, int maxLines = 1}) {
-    return Container(
+      {bool error = false, int maxLines = 1, int? maxLength}) {
+    final box = Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       decoration: BoxDecoration(
         color: AppColors.cream,
@@ -1124,6 +1180,9 @@ class _HabitSheetState extends ConsumerState<_HabitSheet> {
       child: TextField(
         controller: controller,
         maxLines: maxLines,
+        inputFormatters: maxLength == null
+            ? null
+            : [LengthLimitingTextInputFormatter(maxLength)],
         style: AppType.body,
         cursorColor: AppColors.popPurple,
         textCapitalization: TextCapitalization.sentences,
@@ -1135,6 +1194,20 @@ class _HabitSheetState extends ConsumerState<_HabitSheet> {
           hintStyle: AppType.body.copyWith(color: AppColors.textMuted),
         ),
       ),
+    );
+    if (maxLength == null) return box;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        box,
+        Padding(
+          padding: const EdgeInsets.only(top: 3, right: 4),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: CharCounter(controller: controller, max: maxLength),
+          ),
+        ),
+      ],
     );
   }
 }
