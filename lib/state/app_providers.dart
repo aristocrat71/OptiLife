@@ -86,20 +86,21 @@ final treesProvider = StreamProvider<List<TreeRow>>(
 /// Live search term for the Workshop Quests tab.
 final questSearchProvider = StateProvider<String>((ref) => '');
 
-/// Active category filter (null = all categories).
+/// Selected category filters (empty = all categories).
 final questCategoryFilterProvider =
-    StateProvider<QuestCategory?>((ref) => null);
+    StateProvider<Set<QuestCategory>>((ref) => const {});
 
-/// Active source filter — preset / user (null = both).
-final questSourceFilterProvider = StateProvider<QuestSource?>((ref) => null);
+/// Selected source filters — preset / user (empty = both).
+final questSourceFilterProvider =
+    StateProvider<Set<QuestSource>>((ref) => const {});
 
 /// The Workshop quest list, re-queried whenever the search or filters change.
 final workshopQuestsProvider = StreamProvider<List<Quest>>((ref) {
   final db = ref.watch(databaseProvider);
   return db.watchWorkshopQuests(
     search: ref.watch(questSearchProvider),
-    category: ref.watch(questCategoryFilterProvider),
-    source: ref.watch(questSourceFilterProvider),
+    categories: ref.watch(questCategoryFilterProvider),
+    sources: ref.watch(questSourceFilterProvider),
   );
 });
 

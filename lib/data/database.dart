@@ -124,17 +124,21 @@ class AppDatabase extends _$AppDatabase {
   /// quests (`isActive=false`) drop out. Active rows sort first, then by title.
   Stream<List<Quest>> watchWorkshopQuests({
     String search = '',
-    QuestCategory? category,
-    QuestSource? source,
+    Set<QuestCategory> categories = const {},
+    Set<QuestSource> sources = const {},
   }) {
     final query = select(quests)
       ..where((t) =>
           t.source.equalsValue(QuestSource.preset) | t.isActive.equals(true));
-    if (category != null) {
-      query.where((t) => t.category.equalsValue(category));
+    // Multi-select filters: OR the matches within each facet (in SQL).
+    if (categories.isNotEmpty) {
+      query.where((t) => categories
+          .map((c) => t.category.equalsValue(c))
+          .reduce((a, b) => a | b));
     }
-    if (source != null) {
-      query.where((t) => t.source.equalsValue(source));
+    if (sources.isNotEmpty) {
+      query.where((t) =>
+          sources.map((s) => t.source.equalsValue(s)).reduce((a, b) => a | b));
     }
     final term = search.trim();
     if (term.isNotEmpty) {

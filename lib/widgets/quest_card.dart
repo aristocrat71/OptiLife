@@ -105,7 +105,7 @@ class QuestCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 9),
         decoration: popSurface(fill: color, radius: AppRadii.md, stroke: 2.5),
-        child: Text('Done?', style: AppType.label.copyWith(fontSize: 15)),
+        child: Text('Done', style: AppType.label.copyWith(fontSize: 15)),
       ),
     );
   }
