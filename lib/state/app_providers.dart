@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart'; // StateProvider (Riverpod 3)
 
 import '../core/date_utils.dart';
+import '../core/enums.dart';
 import '../data/database.dart';
 import '../data/game_repository.dart';
 
@@ -79,6 +80,28 @@ final rolledQuestsForSelectedDateProvider =
 /// The current biome's trees (date-agnostic).
 final treesProvider = StreamProvider<List<TreeRow>>(
     (ref) => ref.watch(databaseProvider).watchTrees());
+
+// ── Workshop quest browsing (filtering happens in SQL — see
+//    AppDatabase.watchWorkshopQuests) ──
+/// Live search term for the Workshop Quests tab.
+final questSearchProvider = StateProvider<String>((ref) => '');
+
+/// Active category filter (null = all categories).
+final questCategoryFilterProvider =
+    StateProvider<QuestCategory?>((ref) => null);
+
+/// Active source filter — preset / user (null = both).
+final questSourceFilterProvider = StateProvider<QuestSource?>((ref) => null);
+
+/// The Workshop quest list, re-queried whenever the search or filters change.
+final workshopQuestsProvider = StreamProvider<List<Quest>>((ref) {
+  final db = ref.watch(databaseProvider);
+  return db.watchWorkshopQuests(
+    search: ref.watch(questSearchProvider),
+    category: ref.watch(questCategoryFilterProvider),
+    source: ref.watch(questSourceFilterProvider),
+  );
+});
 
 // ── gameplay write layer (Data Models §7) ──
 final gameRepositoryProvider = Provider<GameRepository>(

@@ -118,6 +118,36 @@ class AppDatabase extends _$AppDatabase {
         ..orderBy([(t) => OrderingTerm(expression: t.plantedAt)]))
       .watch();
 
+  /// Workshop quest list, **filtered in SQL** (not client-side): optional title/
+  /// description search + optional category. Shows all presets (active or not,
+  /// so they can be toggled back on) plus active user quests; deleted user
+  /// quests (`isActive=false`) drop out. Active rows sort first, then by title.
+  Stream<List<Quest>> watchWorkshopQuests({
+    String search = '',
+    QuestCategory? category,
+    QuestSource? source,
+  }) {
+    final query = select(quests)
+      ..where((t) =>
+          t.source.equalsValue(QuestSource.preset) | t.isActive.equals(true));
+    if (category != null) {
+      query.where((t) => t.category.equalsValue(category));
+    }
+    if (source != null) {
+      query.where((t) => t.source.equalsValue(source));
+    }
+    final term = search.trim();
+    if (term.isNotEmpty) {
+      final like = '%$term%';
+      query.where((t) => t.title.like(like) | t.description.like(like));
+    }
+    query.orderBy([
+      (t) => OrderingTerm(expression: t.isActive, mode: OrderingMode.desc),
+      (t) => OrderingTerm(expression: t.title),
+    ]);
+    return query.watch();
+  }
+
   // ── task writes (no LE — Data Models §4.8) ──
   Future<void> addTask(String title, String? description, DateTime dueDate) =>
       into(tasks).insert(TasksCompanion.insert(
@@ -206,6 +236,35 @@ class AppDatabase extends _$AppDatabase {
   Future<void> _patchSettings(SettingsCompanion patch) =>
       (update(settings)..where((t) => t.id.equals(1)))
           .write(patch.copyWith(lastModified: Value(DateTime.now())));
+
+  // ── quest writes (Workshop CRUD; presets toggle, user quests full CRUD) ──
+  Future<void> addQuest(
+          String title, String? description, QuestCategory category) =>
+      into(quests).insert(QuestsCompanion.insert(
+        title: title,
+        description: Value(description),
+        category: category,
+        source: QuestSource.user,
+      ));
+
+  Future<void> updateQuest(
+          String id, String title, String? description, QuestCategory category) =>
+      (update(quests)..where((t) => t.id.equals(id))).write(QuestsCompanion(
+        title: Value(title),
+        description: Value(description),
+        category: Value(category),
+        lastModified: Value(DateTime.now()),
+      ));
+
+  /// Toggle a quest in/out of the daily roll pool (presets) — Data Models §4.3.
+  Future<void> setQuestActive(String id, bool active) =>
+      (update(quests)..where((t) => t.id.equals(id))).write(QuestsCompanion(
+        isActive: Value(active),
+        lastModified: Value(DateTime.now()),
+      ));
+
+  /// Soft-delete a user quest (Data Models §6): keep completion history.
+  Future<void> softDeleteQuest(String id) => setQuestActive(id, false);
 
   /// Copies the previous calendar day's tasks onto [targetDate] (fresh, not
   /// completed). Returns how many were copied.
