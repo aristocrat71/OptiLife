@@ -120,15 +120,15 @@ The biome is **cumulative and date-agnostic** — it represents the current stat
 
 ### 5.1 Sticky Top Controls (always visible on every screen)
 
-The top of every screen has **three independent floating sticky buttons** — *not* a solid bar. Each floats over the underlying content as its own element. Exact positioning, sizing, spacing, and visual treatment will be finalized when building the UI screens.
+The top of every screen has **three independent floating sticky buttons** — *not* a solid bar. Each floats over the underlying content as its own element. All three share a **circular** form factor and the same diameter, so the top row reads as three equal-sized coins.
 
 | Position | Element | Behavior |
 |---|---|---|
-| Top-left | LE meter | Visual gauge showing progress within current level. Tappable later for analytics. |
-| Top-middle | Central nav circle | Heartbeat pulse animation. Tap opens radial menu. |
-| Top-right | Calendar button | See § 5.5 for behavior. |
+| Top-left | LE meter | **Circular ring gauge** — a circular progress ring fills clockwise to show progress within the current level (0 → 50), with the ⚡ glyph centred and a small current-level badge. Same diameter as the calendar button. Tappable later for analytics. |
+| Top-middle | Central nav circle | Heartbeat animation (button swell + outward ripple waves). Tap opens radial menu. |
+| Top-right | Calendar button | **Circular** button. See § 5.5 for behavior. |
 
-All three persist across every screen, every gesture, and every date — they never slide away or hide.
+All three persist across every screen, every gesture, and every date — they never slide away or hide. The LE meter and calendar share the central nav circle's circular silhouette (the nav circle is slightly larger as the primary action).
 
 ### 5.2 Primary Navigation (Horizontal Swipe)
 
@@ -212,7 +212,8 @@ Marking and unmarking on the **current day** is fully symmetric:
 | Unlog good habit | −2 |
 | Log bad habit (avoided) | +2 |
 | Unlog bad habit (avoided) | −2 |
-| Log bad habit (slip) | 0 |
+
+**Habits are a single binary toggle, not a tri-state.** Each habit has exactly one positive action — good habits toggle **Done**, bad habits toggle **Avoided** — and the inverse is simply *not logged* (neutral, 0 LE). There is no explicit "slip" log: a bad habit you didn't avoid is just left untoggled. (This replaces the earlier tri-state model that carried a separate `done`-as-slip entry worth 0 LE.)
 
 The LE meter responds immediately to either direction. Note this only applies to today — past dates are read-only (see § 6.2).
 
@@ -252,8 +253,8 @@ The reroll button is visible on the SQ screen always but disabled (with a contex
 
 ## 7. UI Signature Elements
 
-- **Heartbeat pulse** on the central nav circle — subtle scale animation (~0.8s cycle, scale 1.0 → 1.08 → 1.0).
-- **Liquid-fill background** — animated wave rising from the bottom of the screen, height proportional to LE within current level. Toggle on/off in Settings.
+- **Heartbeat pulse** on the central nav circle — a subtle scale animation (~0.8s cycle, scale 1.0 → 1.08 → 1.0) **paired with ripple waves**: concentric rings expand outward from the button and fade as they grow, like a sonar/heartbeat ping. The two run on the same cycle so each "beat" both swells the button and emits a ring.
+- **Liquid-fill background** — animated wave rising from the bottom of the screen, height proportional to LE within current level. Shown on **every screen except Biome** (the Biome has its own isometric world backdrop and is date/LE-agnostic in presentation). Toggle on/off in Settings.
 - **Customizable journal typography** — font choice (handwriting vs. formal) and right-align toggle.
 - **Cartoonish 2.5D isometric biome** — rendered with the Flame engine.
 
@@ -284,7 +285,7 @@ If sync is ever added, the target is **Supabase free tier** (Postgres). Drift's 
 ### 8.4 Implementation Notes (Captured from Discussion)
 
 - **Journal vertical scroll conflict:** Use Flutter's `NestedScrollView`. The journal entry body lives inside the inner scrollable; day-change is triggered by the outer scrollable. Day-change should fire only after **~80–100px of past-the-edge drag** on the outer scroll, not on every small overscroll. Threshold to be tuned on a real device.
-- **Heartbeat animation:** `AnimationController` with `repeat(reverse: true)`, wrapped in `ScaleTransition`.
+- **Heartbeat animation:** `AnimationController` with `repeat(reverse: true)`, wrapped in `ScaleTransition` for the button swell. The **ripple waves** are 2–3 concentric rings driven by the same controller (or a `repeat()` companion): each ring animates outward (scale up) while fading opacity to 0, staggered so they read as successive pings. Implement with `AnimatedBuilder` over `Transform.scale` + `Opacity` on ring widgets stacked behind the button, or a small `CustomPainter`. Keep them non-interactive (ignore pointer) so taps still hit the button.
 - **Liquid fill:** Custom `CustomPainter` with two phase-shifted sine waves for natural wobble; color tint can shift based on most-recent quest category.
 - **Radial nav menu:** Custom `Overlay` with animated `Positioned` children. Worth writing custom for visual identity (not using `flutter_speed_dial`).
 

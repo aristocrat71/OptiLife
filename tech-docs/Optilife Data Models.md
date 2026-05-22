@@ -344,11 +344,15 @@ class HabitLogs extends Table {
   // The day this log applies to (date-truncated).
 
   TextColumn get status => textEnum<HabitLogStatus>()();
-  // done       — good habit performed, OR bad habit slipped
+  // done       — good habit performed
   // avoided    — bad habit successfully avoided
+  // A log row exists ONLY for the positive action. Good habits write
+  // `done`; bad habits write `avoided`. There is no "slip" row — a bad
+  // habit that wasn't avoided is simply left unlogged (no row, 0 LE).
 
-  IntColumn get leAwarded => integer().withDefault(const Constant(0))();
-  // +2 for good=done or bad=avoided; 0 for bad=done (a slip earns nothing).
+  IntColumn get leAwarded => integer().withDefault(const Constant(2))();
+  // Always +2: every habit log is a positive action (good=done or
+  // bad=avoided). The old 0-LE "slip" case is gone (no row is written).
 
   DateTimeColumn get loggedAt => dateTime()();
   DateTimeColumn get createdAt => dateTime()();
@@ -569,18 +573,17 @@ Only valid for today's completions (past is read-only). Symmetric inverse of § 
 1. Verify not in placement mode. If in placement mode, block.
 2. Check if habit_logs already has a row for (habitId, today).
    - If yes: this is a toggle-off (handled in § 7.4).
-   - If no: insert with status = done or avoided.
-3. Compute leAwarded:
-   - good habit + done → +2
-   - bad habit + avoided → +2
-   - bad habit + done (a slip) → 0
-4. If leAwarded > 0:
-     a. Update the log row's leAwarded.
-     b. oldLevel = (lifetimeLe / 50) + 1
-     c. newLifetimeLe = lifetimeLe + leAwarded
-     d. newLevel = (newLifetimeLe / 50) + 1
-     e. Update app_state.lifetimeLe.
-     f. If newLevel > oldLevel: trigger tree planting flow
+   - If no: insert the positive-action row —
+       good habit → status = done
+       bad habit  → status = avoided
+     (Habits are a single binary toggle; there is no "slip" log.)
+3. leAwarded = +2 (every habit log is a positive action).
+4. Apply the LE gain:
+     a. oldLevel = (lifetimeLe / 50) + 1
+     b. newLifetimeLe = lifetimeLe + 2
+     c. newLevel = (newLifetimeLe / 50) + 1
+     d. Update app_state.lifetimeLe.
+     e. If newLevel > oldLevel: trigger tree planting flow
         (see § 7.1 step 8 — same as quest completion).
 ```
 
