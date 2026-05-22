@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../state/app_providers.dart'; // re-exports dateOnly + le_math helpers
 import '../theme/theme.dart';
 import '../widgets/pop_calendar.dart';
-import '../widgets/pop_tappable.dart';
 import '../widgets/radial_menu.dart';
 import '../widgets/shell_controls.dart';
 import 'placeholder_pages.dart';
@@ -32,11 +31,11 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   Future<void> _openNav() async {
     final i = await showRadialMenu(context);
-    if (i != null && mounted) {
-      _controller.animateToPage(i,
-          duration: AppMotion.pop, curve: AppMotion.curvePop);
-    }
+    if (i != null && mounted) _goToPage(i);
   }
+
+  void _goToPage(int i) => _controller.animateToPage(i,
+      duration: AppMotion.pop, curve: AppMotion.curvePop);
 
   Future<void> _pickDate() async {
     final now = DateTime.now();
@@ -179,52 +178,103 @@ class _AppShellState extends ConsumerState<AppShell> {
               ),
             ),
           ),
-          // "Go to Present" — only when viewing another day. Floats above the
-          // page dots so it never collides with the date display / header.
-          if (!isToday)
+          // Directional edge peeks replace the page dots: the adjacent pages'
+          // icons hug the bottom corners (tap to glide there).
+          if (_index > 0)
             Positioned(
-              bottom: AppSpace.pageDotsInset + 30,
-              left: 0,
-              right: 0,
+              bottom: AppSpace.pageDotsInset,
+              left: AppSpace.screenGutter,
               child: SafeArea(
                 top: false,
-                child: Center(child: _GoToPresentPill(onTap: _goToToday)),
+                child: _EdgePeek(
+                  target: _navTargets[_index - 1],
+                  pointLeft: true,
+                ),
               ),
             ),
-          Positioned(
-            bottom: AppSpace.pageDotsInset,
-            left: 0,
-            right: 0,
-            child: SafeArea(
+          if (_index < _navTargets.length - 1)
+            Positioned(
+              bottom: AppSpace.pageDotsInset,
+              right: AppSpace.screenGutter,
+              child: SafeArea(
                 top: false,
-                child: PageDots(count: 4, activeIndex: _index)),
-          ),
+                child: _EdgePeek(
+                  target: _navTargets[_index + 1],
+                  pointLeft: false,
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 }
 
-/// Floating pill that returns the global date to today. Shown only off-today.
-class _GoToPresentPill extends StatelessWidget {
-  const _GoToPresentPill({required this.onTap});
-  final VoidCallback onTap;
+/// Icon + color for each PageView destination (Biome · SQ · Tasks · Journal).
+class _NavTarget {
+  const _NavTarget(this.icon, this.color);
+  final IconData icon;
+  final Color color;
+}
+
+const _navTargets = [
+  _NavTarget(Icons.park_outlined, Color(0xFF7AC974)),
+  _NavTarget(Icons.flag_outlined, AppColors.popPurple),
+  _NavTarget(Icons.check_box_outlined, AppColors.popPink),
+  _NavTarget(Icons.menu_book_outlined, AppColors.popTeal),
+];
+
+/// A minimalist bottom-corner peek at the adjacent page: a clean outline icon
+/// in the page's color, with a chevron that rhythmically nudges outward to
+/// beckon a swipe. Non-interactive — swiping is the only way to navigate.
+class _EdgePeek extends StatefulWidget {
+  const _EdgePeek({required this.target, required this.pointLeft});
+  final _NavTarget target;
+  final bool pointLeft;
+
+  @override
+  State<_EdgePeek> createState() => _EdgePeekState();
+}
+
+class _EdgePeekState extends State<_EdgePeek>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _beckon = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  )..repeat(reverse: true);
+  late final Animation<double> _t =
+      CurvedAnimation(parent: _beckon, curve: Curves.easeInOut);
+
+  @override
+  void dispose() {
+    _beckon.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return PopTappable(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-        decoration: popSurface(
-            fill: AppColors.popPink, radius: AppRadii.pill, stroke: 2.5),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.today_rounded, size: 16, color: AppColors.cream),
-          const SizedBox(width: 7),
-          Text('GO TO PRESENT',
-              style: AppType.label
-                  .copyWith(fontSize: 13, color: AppColors.cream)),
-        ]),
+    final dir = widget.pointLeft ? -1.0 : 1.0;
+    final icon = Icon(widget.target.icon, color: widget.target.color, size: 26);
+    final chevron = AnimatedBuilder(
+      animation: _t,
+      builder: (_, _) => Transform.translate(
+        offset: Offset(dir * 6 * _t.value, 0),
+        child: Opacity(
+          opacity: 0.3 + 0.5 * _t.value,
+          child: Icon(
+            widget.pointLeft
+                ? Icons.chevron_left_rounded
+                : Icons.chevron_right_rounded,
+            size: 22,
+            color: AppColors.ink,
+          ),
+        ),
+      ),
+    );
+    return IgnorePointer(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: widget.pointLeft ? [chevron, icon] : [icon, chevron],
       ),
     );
   }
@@ -289,7 +339,7 @@ class _LiquidPainter extends CustomPainter {
     final bob = math.sin(t * tau) * 4;
     final fillTop = size.height * (1 - (0.12 + 0.33 * fraction.clamp(0, 1))) + bob;
     final paint = Paint()
-      ..color = AppColors.popPurple.withValues(alpha: 0.16);
+      ..color = AppColors.popPurple.withValues(alpha: 0.10);
     // Two waves drifting at different speeds/directions for an organic surface.
     // Speeds are whole numbers of cycles per loop so the waveform at t=1 is
     // identical to t=0 — the repeat is seamless (no visible reset).
