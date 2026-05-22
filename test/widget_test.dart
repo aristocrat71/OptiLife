@@ -1,30 +1,24 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:optilife/widgets/shell_controls.dart';
 
-import 'package:optilife/main.dart';
-
+/// Pure-widget render tests. The full app isn't pumped here because the nav's
+/// heartbeat/ripple use AnimationController.repeat(), which makes a full-app
+/// widget test hang — app boot is verified by running the app.
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('DateDisplay shows day number, month, and weekday', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(home: Scaffold(body: DateDisplay(date: DateTime(2026, 5, 22)))),
+    );
+    expect(find.text('22'), findsOneWidget);
+    expect(find.text('MAY'), findsOneWidget);
+    expect(find.text('FRI'), findsOneWidget); // 22 May 2026 is a Friday
+  });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  testWidgets('PageDots renders one dot per page', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: PageDots(count: 4, activeIndex: 1))),
+    );
+    expect(find.byType(AnimatedContainer), findsNWidgets(4));
   });
 }
