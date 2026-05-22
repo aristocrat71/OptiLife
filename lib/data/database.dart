@@ -43,8 +43,7 @@ class AppDatabase extends _$AppDatabase {
             // 6-quest experiment; safe to squash before release.)
             await (update(settings)..where((t) => t.id.equals(1)))
                 .write(const SettingsCompanion(questsPerDay: Value(3)));
-            final now = DateTime.now();
-            final today = DateTime(now.year, now.month, now.day);
+            final today = dateOnly(DateTime.now());
             await (delete(dailyQuestRolls)..where((t) => t.date.equals(today)))
                 .go();
           }
@@ -119,6 +118,40 @@ class AppDatabase extends _$AppDatabase {
         ..orderBy([(t) => OrderingTerm(expression: t.plantedAt)]))
       .watch();
 
+  /// Workshop quest list, **filtered in SQL** (not client-side): optional title/
+  /// description search + optional category. Shows all presets (active or not,
+  /// so they can be toggled back on) plus active user quests; deleted user
+  /// quests (`isActive=false`) drop out. Active rows sort first, then by title.
+  Stream<List<Quest>> watchWorkshopQuests({
+    String search = '',
+    Set<QuestCategory> categories = const {},
+    Set<QuestSource> sources = const {},
+  }) {
+    final query = select(quests)
+      ..where((t) =>
+          t.source.equalsValue(QuestSource.preset) | t.isActive.equals(true));
+    // Multi-select filters: OR the matches within each facet (in SQL).
+    if (categories.isNotEmpty) {
+      query.where((t) => categories
+          .map((c) => t.category.equalsValue(c))
+          .reduce((a, b) => a | b));
+    }
+    if (sources.isNotEmpty) {
+      query.where((t) =>
+          sources.map((s) => t.source.equalsValue(s)).reduce((a, b) => a | b));
+    }
+    final term = search.trim();
+    if (term.isNotEmpty) {
+      final like = '%$term%';
+      query.where((t) => t.title.like(like) | t.description.like(like));
+    }
+    query.orderBy([
+      (t) => OrderingTerm(expression: t.isActive, mode: OrderingMode.desc),
+      (t) => OrderingTerm(expression: t.title),
+    ]);
+    return query.watch();
+  }
+
   // ── task writes (no LE — Data Models §4.8) ──
   Future<void> addTask(String title, String? description, DateTime dueDate) =>
       into(tasks).insert(TasksCompanion.insert(
@@ -144,6 +177,98 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> deleteTask(String id) =>
       (delete(tasks)..where((t) => t.id.equals(id))).go();
+
+  // ── journal writes (one entry per day; `date` is UNIQUE — Data Models §4.9) ──
+  /// Upserts the entry for [day]. Called debounced from the journal editor.
+  Future<void> upsertJournal(DateTime day, String body) async {
+    final date = dateOnly(day);
+    await into(journalEntries).insert(
+      JournalEntriesCompanion.insert(
+        date: date,
+        body: Value(body),
+      ),
+      onConflict: DoUpdate(
+        (_) => JournalEntriesCompanion(
+          body: Value(body),
+          lastModified: Value(DateTime.now()),
+        ),
+        target: [journalEntries.date],
+      ),
+    );
+  }
+
+  // ── habit writes (CRUD for the Workshop; logging lives in GameRepository) ──
+  Future<void> addHabit(String title, String? description, HabitType type) =>
+      into(habits).insert(HabitsCompanion.insert(
+        title: title,
+        description: Value(description),
+        type: type,
+      ));
+
+  Future<void> updateHabit(
+          String id, String title, String? description, HabitType type) =>
+      (update(habits)..where((t) => t.id.equals(id))).write(HabitsCompanion(
+        title: Value(title),
+        description: Value(description),
+        type: Value(type),
+        lastModified: Value(DateTime.now()),
+      ));
+
+  /// Soft-delete (Data Models §6): keep history (logs/trees), just deactivate.
+  Future<void> softDeleteHabit(String id) =>
+      (update(habits)..where((t) => t.id.equals(id))).write(HabitsCompanion(
+        isActive: const Value(false),
+        lastModified: Value(DateTime.now()),
+      ));
+
+  // ── settings writes (write-through, immediate — Data Models §4.2) ──
+  Future<void> setLiquidFillEnabled(bool v) => _patchSettings(
+      SettingsCompanion(liquidFillEnabled: Value(v)));
+
+  Future<void> setJournalFont(JournalFont f) =>
+      _patchSettings(SettingsCompanion(journalFont: Value(f)));
+
+  Future<void> setJournalAlignment(JournalAlignment a) =>
+      _patchSettings(SettingsCompanion(journalAlignment: Value(a)));
+
+  Future<void> setQuestsPerDay(int n) => _patchSettings(
+      SettingsCompanion(questsPerDay: Value(n.clamp(1, 9))));
+
+  Future<void> setNotificationsEnabled(bool v) => _patchSettings(
+      SettingsCompanion(notificationsEnabled: Value(v)));
+
+  Future<void> _patchSettings(SettingsCompanion patch) =>
+      (update(settings)..where((t) => t.id.equals(1)))
+          .write(patch.copyWith(lastModified: Value(DateTime.now())));
+
+  // ── quest writes (Workshop CRUD; presets toggle, user quests full CRUD) ──
+  Future<void> addQuest(
+          String title, String? description, QuestCategory category) =>
+      into(quests).insert(QuestsCompanion.insert(
+        title: title,
+        description: Value(description),
+        category: category,
+        source: QuestSource.user,
+      ));
+
+  Future<void> updateQuest(
+          String id, String title, String? description, QuestCategory category) =>
+      (update(quests)..where((t) => t.id.equals(id))).write(QuestsCompanion(
+        title: Value(title),
+        description: Value(description),
+        category: Value(category),
+        lastModified: Value(DateTime.now()),
+      ));
+
+  /// Toggle a quest in/out of the daily roll pool (presets) — Data Models §4.3.
+  Future<void> setQuestActive(String id, bool active) =>
+      (update(quests)..where((t) => t.id.equals(id))).write(QuestsCompanion(
+        isActive: Value(active),
+        lastModified: Value(DateTime.now()),
+      ));
+
+  /// Soft-delete a user quest (Data Models §6): keep completion history.
+  Future<void> softDeleteQuest(String id) => setQuestActive(id, false);
 
   /// Copies the previous calendar day's tasks onto [targetDate] (fresh, not
   /// completed). Returns how many were copied.

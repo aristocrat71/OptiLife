@@ -18,6 +18,9 @@ abstract final class AppColors {
   static const popCoral = Color(0xFFFF6B5E);
   static const mutedInk = Color(0xFF9B8FB0);
 
+  /// Biome's leafy light green (the Bio nav/petal colour).
+  static const biomeGreen = Color(0xFF7AC974);
+
   // ── semantic ──
   static const background = cream;
   static const surface = paper;
