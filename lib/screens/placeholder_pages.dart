@@ -41,12 +41,13 @@ class TasksPage extends StatelessWidget {
   const TasksPage({super.key});
   @override
   Widget build(BuildContext context) =>
-      const _Stub(title: 'Tasks', bg: AppColors.cream, emoji: '✓');
+      // Transparent so the shared liquid backdrop shows through (like SQ).
+      const _Stub(title: 'Tasks', bg: Colors.transparent, emoji: '✓');
 }
 
 class JournalPage extends StatelessWidget {
   const JournalPage({super.key});
   @override
   Widget build(BuildContext context) =>
-      const _Stub(title: 'Journal', bg: AppColors.cream, emoji: '📖');
+      const _Stub(title: 'Journal', bg: Colors.transparent, emoji: '📖');
 }

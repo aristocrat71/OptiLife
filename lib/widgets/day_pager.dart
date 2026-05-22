@@ -28,6 +28,7 @@ class _DayPagerState extends ConsumerState<DayPager> {
   static const _threshold = 90.0;
   double _accum = 0;
   bool _fired = false;
+  DateTime? _prevDate; // to infer transition direction (works for scroll + calendar)
 
   void _changeDay(int deltaDays) {
     final current = ref.read(selectedDateProvider);
@@ -45,6 +46,12 @@ class _DayPagerState extends ConsumerState<DayPager> {
   @override
   Widget build(BuildContext context) {
     final date = ref.watch(selectedDateProvider);
+    // Direction: later day → new content flies up from below; earlier day →
+    // drops in from above. Covers both scroll and calendar hops.
+    final forward = _prevDate == null || !date.isBefore(_prevDate!);
+    _prevDate = date;
+    final enterFrom = Offset(0, forward ? 0.18 : -0.18);
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onVerticalDragStart: (_) {
@@ -68,15 +75,17 @@ class _DayPagerState extends ConsumerState<DayPager> {
         // animate — only an actual day change does.
         child: AnimatedSwitcher(
           duration: AppMotion.pop,
-          switchInCurve: Curves.easeOutCubic,
+          switchInCurve: Curves.easeOutBack, // bouncy overshoot
           switchOutCurve: Curves.easeIn,
           transitionBuilder: (child, anim) => FadeTransition(
             opacity: anim,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                      begin: const Offset(0, 0.03), end: Offset.zero)
-                  .animate(anim),
-              child: child,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.85, end: 1.0).animate(anim),
+              child: SlideTransition(
+                position: Tween<Offset>(begin: enterFrom, end: Offset.zero)
+                    .animate(anim),
+                child: child,
+              ),
             ),
           ),
           child: Padding(
