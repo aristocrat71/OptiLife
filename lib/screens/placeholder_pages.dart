@@ -37,14 +37,6 @@ class BiomePage extends StatelessWidget {
       const _Stub(title: 'Biome', bg: Color(0xFFEAF6FF), emoji: '🌳');
 }
 
-class TasksPage extends StatelessWidget {
-  const TasksPage({super.key});
-  @override
-  Widget build(BuildContext context) =>
-      // Transparent so the shared liquid backdrop shows through (like SQ).
-      const _Stub(title: 'Tasks', bg: Colors.transparent, emoji: '✓');
-}
-
 class JournalPage extends StatelessWidget {
   const JournalPage({super.key});
   @override
