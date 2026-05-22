@@ -66,34 +66,50 @@ class _SideQuestPageState extends ConsumerState<SideQuestPage> {
         const SizedBox(height: 16),
         _header(quests.asData?.value),
         const SizedBox(height: 16),
+        // The quest cards live in their own scrollable box (so a long list
+        // scrolls internally). Dragging inside it scrolls; dragging anywhere
+        // outside it (date, header, reroll, margins) changes the day.
         if (isFuture)
-          _empty('🔮', 'Side Quests not determined.\nThey roll on the day itself.')
+          Expanded(
+            child: _empty(
+                '🔮', 'Side Quests not determined.\nThey roll on the day itself.'),
+          )
         else
-          quests.when(
-            loading: () => const Padding(
-                padding: EdgeInsets.only(top: 40),
-                child: Center(child: CircularProgressIndicator())),
-            error: (e, _) => Text('$e', style: AppType.body),
-            data: (list) => list.isEmpty
-                ? _empty('🌱',
-                    isPast ? 'No quests were rolled this day.' : 'No active quests — add some in the Workshop.')
-                : Column(
-                    children: [
-                      for (final rq in list) ...[
-                        QuestCard(
-                          rolled: rq,
-                          readOnly: isPast,
-                          onMark: () => _onMark(rq.quest.id),
-                          onUndo: () => ref
-                              .read(gameRepositoryProvider)
-                              .unmarkQuest(rq.quest.id),
-                        ),
-                        const SizedBox(height: 14),
+          Expanded(
+            child: quests.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Text('$e', style: AppType.body),
+              data: (list) => list.isEmpty
+                  ? _empty(
+                      '🌱',
+                      isPast
+                          ? 'No quests were rolled this day.'
+                          : 'No active quests — add some in the Workshop.')
+                  : ListView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.zero,
+                      children: [
+                        for (final rq in list) ...[
+                          QuestCard(
+                            rolled: rq,
+                            readOnly: isPast,
+                            onMark: () => _onMark(rq.quest.id),
+                            onUndo: () => ref
+                                .read(gameRepositoryProvider)
+                                .unmarkQuest(rq.quest.id),
+                          ),
+                          const SizedBox(height: 14),
+                        ],
                       ],
-                      if (!isPast) _rerollButton(),
-                    ],
-                  ),
+                    ),
+            ),
           ),
+        // Reroll sits below the box — part of the day-change (outside) zone.
+        if (!isPast && !isFuture) ...[
+          const SizedBox(height: 16),
+          _rerollButton(),
+        ],
       ],
     );
   }
@@ -122,30 +138,32 @@ class _SideQuestPageState extends ConsumerState<SideQuestPage> {
   }
 
   Widget _rerollButton() {
-    // Wide horizontal pill pinned below the list (design §5).
-    return GestureDetector(
-      onTap: _onReroll,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
-        decoration:
-            popSurface(fill: AppColors.energy, radius: AppRadii.pill, stroke: 3),
-        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          const Icon(Icons.casino_rounded, size: 22, color: AppColors.ink),
-          const SizedBox(width: 10),
-          Text('REROLL TODAY', style: AppType.label.copyWith(fontSize: 16)),
-          const SizedBox(width: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-                color: AppColors.ink, borderRadius: AppRadii.r(AppRadii.sm)),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Text('-10',
-                  style: AppType.label
-                      .copyWith(fontSize: 13, color: AppColors.cream)),
-              const Icon(Icons.bolt, size: 13, color: AppColors.energy),
-            ]),
-          ),
-        ]),
+    return Center(
+      child: GestureDetector(
+        onTap: _onReroll,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 16),
+          decoration:
+              popSurface(fill: AppColors.energy, radius: AppRadii.lg, stroke: 3),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text('REROLL', style: AppType.label.copyWith(fontSize: 20)),
+            const SizedBox(height: 8),
+            const Icon(Icons.casino_rounded, size: 30, color: AppColors.ink),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+              decoration: BoxDecoration(
+                  color: AppColors.ink,
+                  borderRadius: AppRadii.r(AppRadii.sm)),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Text('10',
+                    style: AppType.label
+                        .copyWith(fontSize: 15, color: AppColors.cream)),
+                const Icon(Icons.bolt, size: 14, color: AppColors.energy),
+              ]),
+            ),
+          ]),
+        ),
       ),
     );
   }
