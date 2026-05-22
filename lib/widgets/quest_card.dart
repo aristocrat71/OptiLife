@@ -28,7 +28,7 @@ class QuestCard extends StatelessWidget {
 
     return Container(
       decoration: popSurface(
-        fill: done ? AppColors.categoryWash(cat) : AppColors.paper,
+        fill: AppColors.paper,
         shadow: !readOnly,
       ).copyWith(
         border: Border.all(
@@ -51,26 +51,12 @@ class QuestCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         _Chip(label: cat.name.toUpperCase(), fill: color),
-                        if (done)
-                          const _Chip(
-                              label: 'DONE',
-                              fill: AppColors.positive,
-                              icon: Icons.check_rounded)
-                        else
-                          const _Chip(
-                              label: '+10',
-                              fill: AppColors.energy,
-                              icon: Icons.bolt),
+                        const _Chip(
+                            label: '+10', fill: AppColors.energy, icon: Icons.bolt),
                       ],
                     ),
                     const SizedBox(height: 10),
-                    Text(rolled.quest.title,
-                        style: AppType.bodyL.copyWith(
-                            decoration:
-                                done ? TextDecoration.lineThrough : null,
-                            color: done
-                                ? AppColors.ink.withValues(alpha: 0.55)
-                                : AppColors.ink)),
+                    Text(rolled.quest.title, style: AppType.bodyL),
                     const SizedBox(height: 12),
                     Align(
                       alignment: Alignment.centerRight,
@@ -92,15 +78,18 @@ class QuestCard extends StatelessWidget {
           style: AppType.caption.copyWith(color: AppColors.textMuted));
     }
     if (done) {
+      // Only the toggler changes — same shape/position as MARK, now a teal
+      // DONE state that toggles back off on tap. The card itself is unchanged.
       return PopTappable(
         onTap: onUndo,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: popSurface(radius: AppRadii.pill, stroke: 2, shadow: false),
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 9),
+          decoration:
+              popSurface(fill: AppColors.positive, radius: AppRadii.md, stroke: 2.5),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.undo_rounded, size: 14, color: AppColors.ink),
-            const SizedBox(width: 5),
-            Text('undo', style: AppType.label.copyWith(fontSize: 12)),
+            const Icon(Icons.check_rounded, size: 16, color: AppColors.ink),
+            const SizedBox(width: 6),
+            Text('DONE', style: AppType.label.copyWith(fontSize: 15)),
           ]),
         ),
       );
