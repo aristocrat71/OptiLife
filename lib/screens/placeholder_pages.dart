@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../theme/theme.dart';
 
-/// Temporary stubs so the PageView/navigation works while the real Biome,
-/// Tasks, and Journal screens are built. Replace per `01–04` screen docs.
+/// Temporary stub so the PageView/navigation works while the real Biome screen
+/// is built. Replace per `02-biome.md`.
 class _Stub extends StatelessWidget {
   const _Stub({required this.title, required this.bg, required this.emoji});
   final String title;
@@ -35,11 +35,4 @@ class BiomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       const _Stub(title: 'Biome', bg: Color(0xFFEAF6FF), emoji: '🌳');
-}
-
-class JournalPage extends StatelessWidget {
-  const JournalPage({super.key});
-  @override
-  Widget build(BuildContext context) =>
-      const _Stub(title: 'Journal', bg: Colors.transparent, emoji: '📖');
 }

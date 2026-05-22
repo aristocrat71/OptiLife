@@ -145,6 +145,69 @@ class AppDatabase extends _$AppDatabase {
   Future<void> deleteTask(String id) =>
       (delete(tasks)..where((t) => t.id.equals(id))).go();
 
+  // ── journal writes (one entry per day; `date` is UNIQUE — Data Models §4.9) ──
+  /// Upserts the entry for [day]. Called debounced from the journal editor.
+  Future<void> upsertJournal(DateTime day, String body) async {
+    final date = dateOnly(day);
+    await into(journalEntries).insert(
+      JournalEntriesCompanion.insert(
+        date: date,
+        body: Value(body),
+      ),
+      onConflict: DoUpdate(
+        (_) => JournalEntriesCompanion(
+          body: Value(body),
+          lastModified: Value(DateTime.now()),
+        ),
+        target: [journalEntries.date],
+      ),
+    );
+  }
+
+  // ── habit writes (CRUD for the Workshop; logging lives in GameRepository) ──
+  Future<void> addHabit(String title, String? description, HabitType type) =>
+      into(habits).insert(HabitsCompanion.insert(
+        title: title,
+        description: Value(description),
+        type: type,
+      ));
+
+  Future<void> updateHabit(
+          String id, String title, String? description, HabitType type) =>
+      (update(habits)..where((t) => t.id.equals(id))).write(HabitsCompanion(
+        title: Value(title),
+        description: Value(description),
+        type: Value(type),
+        lastModified: Value(DateTime.now()),
+      ));
+
+  /// Soft-delete (Data Models §6): keep history (logs/trees), just deactivate.
+  Future<void> softDeleteHabit(String id) =>
+      (update(habits)..where((t) => t.id.equals(id))).write(HabitsCompanion(
+        isActive: const Value(false),
+        lastModified: Value(DateTime.now()),
+      ));
+
+  // ── settings writes (write-through, immediate — Data Models §4.2) ──
+  Future<void> setLiquidFillEnabled(bool v) => _patchSettings(
+      SettingsCompanion(liquidFillEnabled: Value(v)));
+
+  Future<void> setJournalFont(JournalFont f) =>
+      _patchSettings(SettingsCompanion(journalFont: Value(f)));
+
+  Future<void> setJournalAlignment(JournalAlignment a) =>
+      _patchSettings(SettingsCompanion(journalAlignment: Value(a)));
+
+  Future<void> setQuestsPerDay(int n) => _patchSettings(
+      SettingsCompanion(questsPerDay: Value(n.clamp(1, 9))));
+
+  Future<void> setNotificationsEnabled(bool v) => _patchSettings(
+      SettingsCompanion(notificationsEnabled: Value(v)));
+
+  Future<void> _patchSettings(SettingsCompanion patch) =>
+      (update(settings)..where((t) => t.id.equals(1)))
+          .write(patch.copyWith(lastModified: Value(DateTime.now())));
+
   /// Copies the previous calendar day's tasks onto [targetDate] (fresh, not
   /// completed). Returns how many were copied.
   Future<int> copyTasksFromPreviousDay(DateTime targetDate) async {

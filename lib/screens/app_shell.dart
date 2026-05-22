@@ -8,7 +8,9 @@ import '../theme/theme.dart';
 import '../widgets/pop_calendar.dart';
 import '../widgets/radial_menu.dart';
 import '../widgets/shell_controls.dart';
+import 'journal_page.dart';
 import 'placeholder_pages.dart';
+import 'settings_page.dart';
 import 'side_quest_page.dart';
 import 'tasks_page.dart';
 
@@ -32,7 +34,13 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   Future<void> _openNav() async {
     final i = await showRadialMenu(context);
-    if (i != null && mounted) _goToPage(i);
+    if (i == null || !mounted) return;
+    if (i == kRadialSettings) {
+      Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => const SettingsPage()));
+    } else {
+      _goToPage(i);
+    }
   }
 
   void _goToPage(int i) => _controller.animateToPage(i,
