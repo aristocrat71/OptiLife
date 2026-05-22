@@ -10,6 +10,7 @@ import '../widgets/radial_menu.dart';
 import '../widgets/shell_controls.dart';
 import 'placeholder_pages.dart';
 import 'side_quest_page.dart';
+import 'tasks_page.dart';
 
 /// Hosts the always-on sticky shell over a horizontally-swiped PageView
 /// (Biome ← SQ → Tasks → Journal). Landing page = Side Quest (index 1).
@@ -165,7 +166,8 @@ class _AppShellState extends ConsumerState<AppShell> {
                       into: leIntoLevel(le),
                       goal: 50,
                     ),
-                    CentralNav(onTap: _openNav),
+                    CentralNav(
+                        onTap: _openNav, color: _navTargets[_index].color),
                     CalendarButton(
                       isToday: isToday,
                       // §5.3: off-today tap springs back to today; long-press
