@@ -166,7 +166,8 @@ class _AppShellState extends ConsumerState<AppShell> {
                       into: leIntoLevel(le),
                       goal: 50,
                     ),
-                    CentralNav(onTap: _openNav),
+                    CentralNav(
+                        onTap: _openNav, color: _navTargets[_index].color),
                     CalendarButton(
                       isToday: isToday,
                       // §5.3: off-today tap springs back to today; long-press
