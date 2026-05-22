@@ -5,8 +5,13 @@ import 'package:flutter/material.dart';
 import '../theme/theme.dart';
 import 'pop_tappable.dart';
 
+/// Sentinel result for the Settings petal — a *pushed* route, not a PageView
+/// page. [AppShell] pushes Settings when [showRadialMenu] returns this.
+const kRadialSettings = -2;
+
 /// Opens the circular radial menu from the central nav. Returns the chosen
-/// PageView index (0=Biome, 1=SQ, 2=Tasks, 3=Journal), or null if dismissed.
+/// PageView index (0=Biome, 1=SQ, 2=Tasks, 3=Journal), [kRadialSettings] for
+/// Settings, or null if dismissed.
 Future<int?> showRadialMenu(BuildContext context) {
   return showGeneralDialog<int>(
     context: context,
@@ -55,8 +60,8 @@ class _RadialMenu extends StatelessWidget {
       _Petal('SQ', Icons.flag_rounded, AppColors.popPurple, 1, 126),
       _Petal('Task', Icons.check_box_rounded, AppColors.popPink, 2, 102),
       _Petal('HJ', Icons.menu_book_rounded, AppColors.popTeal, 3, 78),
-      _Petal('Set', Icons.settings_rounded, Color(0xFF3A3450), -1, 54,
-          enabled: false),
+      _Petal('Set', Icons.settings_rounded, Color(0xFF3A3450),
+          kRadialSettings, 54),
       _Petal('Stats', Icons.bar_chart_rounded, AppColors.hazeDeep, -1, 30,
           enabled: false),
     ];
