@@ -260,8 +260,8 @@ class _GentleBouncePhysics extends BouncingScrollPhysics {
       0.18 * math.pow(1 - overscrollFraction, 2);
 }
 
-/// The reroll button's die — a slow, gentle bounce + wobble (calmer than the
-/// tumbling [_RollingDice]).
+/// The reroll button's die — spins round and round, cycling its pip face as it
+/// turns, so it reads as a die mid-roll.
 class _RerollDie extends StatefulWidget {
   const _RerollDie();
   @override
@@ -271,8 +271,18 @@ class _RerollDie extends StatefulWidget {
 class _RerollDieState extends State<_RerollDie>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 2000))
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 3600))
         ..repeat();
+
+  // Pip positions on a 3×3 grid (indices 0–8) per face value.
+  static const _faces = {
+    1: {4},
+    2: {0, 8},
+    3: {0, 4, 8},
+    4: {0, 2, 6, 8},
+    5: {0, 2, 4, 6, 8},
+    6: {0, 2, 3, 5, 6, 8},
+  };
 
   @override
   void dispose() {
@@ -285,18 +295,54 @@ class _RerollDieState extends State<_RerollDie>
     return AnimatedBuilder(
       animation: _c,
       builder: (_, _) {
-        final v = _c.value;
-        final bob = -8 * math.sin(v * 2 * math.pi).abs(); // two soft hops
-        final rot = 0.12 * math.sin(v * 2 * math.pi); // gentle wobble
-        return Transform.translate(
-          offset: Offset(0, bob),
-          child: Transform.rotate(
-            angle: rot,
-            child: const Icon(Icons.casino_rounded,
-                size: 30, color: AppColors.popCoral),
+        final t = _c.value; // 0..1
+        final rot = t * 2 * math.pi; // one full turn per loop — seamless, slower
+        final face = 1 + (t * 6).floor() % 6; // 6 faces over the loop (~0.6s each)
+        return Transform.rotate(
+          angle: rot,
+          child: Container(
+            width: 46,
+            height: 46,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.paper,
+              borderRadius: AppRadii.r(AppRadii.sm),
+              border: Border.all(color: AppColors.ink, width: 2.5),
+              boxShadow: AppShadows.card,
+            ),
+            child: _pips(face),
           ),
         );
       },
+    );
+  }
+
+  Widget _pips(int face) {
+    final on = _faces[face]!;
+    return Column(
+      children: [
+        for (var r = 0; r < 3; r++)
+          Expanded(
+            child: Row(
+              children: [
+                for (var c = 0; c < 3; c++)
+                  Expanded(
+                    child: Center(
+                      child: on.contains(r * 3 + c)
+                          ? Container(
+                              width: 7,
+                              height: 7,
+                              decoration: const BoxDecoration(
+                                  color: AppColors.popCoral,
+                                  shape: BoxShape.circle),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }
@@ -334,10 +380,10 @@ class _RerollConfirm extends StatelessWidget {
                 children: [
                   Text('Cost',
                       style: AppType.label
-                          .copyWith(fontSize: 13, color: AppColors.textMuted)),
-                  const SizedBox(width: 8),
-                  Text('10', style: AppType.label.copyWith(fontSize: 16)),
-                  const Icon(Icons.bolt, size: 16, color: AppColors.energy),
+                          .copyWith(fontSize: 16, color: AppColors.textMuted)),
+                  const SizedBox(width: 10),
+                  Text('10', style: AppType.label.copyWith(fontSize: 26)),
+                  const Icon(Icons.bolt, size: 26, color: AppColors.energy),
                 ],
               ),
               const SizedBox(height: 22),
