@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="62" height="84" viewBox="0 0 62 84">
+  <!-- PLACEHOLDER: creative = rare glowing plant. Base = (31,82). Replace in art pass. -->
+  <ellipse cx="31" cy="80" rx="17" ry="4.5" fill="#1A1626" opacity="0.16"/>
+  <rect x="27" y="54" width="8" height="24" rx="3" fill="#8A5A32" stroke="#1A1626" stroke-width="2.5"/>
+  <path d="M31 8 L52 50 H10 Z" fill="#9B5DE5" stroke="#1A1626" stroke-width="2.8" stroke-linejoin="round"/>
+  <circle cx="22" cy="28" r="2.6" fill="#FFF7EC"/>
+  <circle cx="38" cy="38" r="2.6" fill="#FFF7EC"/>
+  <circle cx="31" cy="48" r="2.6" fill="#FFF7EC"/>
+</svg>
