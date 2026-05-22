@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/database.dart';
 import '../state/app_providers.dart';
 import '../theme/theme.dart';
+import '../widgets/confirm_dialog.dart';
 import '../widgets/day_pager.dart';
 import '../widgets/pop_calendar.dart';
 import '../widgets/pop_tappable.dart';
@@ -233,7 +234,11 @@ class _TaskRow extends ConsumerWidget {
             ),
             const SizedBox(width: 2),
             GestureDetector(
-              onTap: () => ref.read(databaseProvider).deleteTask(task.id),
+              onTap: () async {
+                final ok = await showConfirmDelete(context,
+                    message: 'Remove “${task.title}”?');
+                if (ok) ref.read(databaseProvider).deleteTask(task.id);
+              },
               behavior: HitTestBehavior.opaque,
               child: const Padding(
                 padding: EdgeInsets.all(4),
@@ -453,11 +458,6 @@ class _TaskSheetState extends State<_TaskSheet> {
     if (mounted) Navigator.of(context).pop();
   }
 
-  Future<void> _delete() async {
-    await widget.db.deleteTask(widget.existing!.id);
-    if (mounted) Navigator.of(context).pop();
-  }
-
   @override
   Widget build(BuildContext context) {
     final editing = widget.existing != null;
@@ -482,23 +482,9 @@ class _TaskSheetState extends State<_TaskSheet> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        editing ? 'EDIT TASK' : 'NEW TASK',
-                        style: AppType.label.copyWith(fontSize: 16),
-                      ),
-                      if (editing)
-                        PopTappable(
-                          onTap: _delete,
-                          child: const Icon(
-                            Icons.delete_outline_rounded,
-                            size: 24,
-                            color: AppColors.negative,
-                          ),
-                        ),
-                    ],
+                  Text(
+                    editing ? 'EDIT TASK' : 'NEW TASK',
+                    style: AppType.label.copyWith(fontSize: 16),
                   ),
                   const SizedBox(height: 14),
                   _field(_title, 'Title…', error: _titleError),

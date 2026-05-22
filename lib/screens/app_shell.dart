@@ -166,6 +166,9 @@ class _AppShellState extends ConsumerState<AppShell> {
     final le = app.asData?.value.lifetimeLe ?? 0;
     final isToday = ref.watch(isTodayProvider);
     final date = ref.watch(selectedDateProvider);
+    // Honour the Appearance setting — when off, drop the backdrop entirely.
+    final liquidOn =
+        ref.watch(settingsProvider).asData?.value.liquidFillEnabled ?? true;
 
     return Scaffold(
       body: Stack(
@@ -173,9 +176,10 @@ class _AppShellState extends ConsumerState<AppShell> {
           // Persistent, independent backdrop: always the bottom layer, never
           // inside the PageView, so horizontal swipes never move it. Sections
           // with their own opaque world (Biome) simply paint over it.
-          Positioned.fill(
-            child: _LiquidBackground(fraction: leIntoLevel(le) / 50),
-          ),
+          if (liquidOn)
+            Positioned.fill(
+              child: _LiquidBackground(fraction: leIntoLevel(le) / 50),
+            ),
           // Reserve the bottom band so page content never sits under the dots.
           Padding(
             padding:

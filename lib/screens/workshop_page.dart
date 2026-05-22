@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/database.dart';
 import '../state/app_providers.dart';
 import '../theme/theme.dart';
+import '../widgets/confirm_dialog.dart';
 import '../widgets/pop_tappable.dart';
 import '../widgets/shell_controls.dart';
 
@@ -34,8 +35,17 @@ class _WorkshopPageState extends State<WorkshopPage> {
               Row(
                 children: [
                   BackCoin(onTap: () => Navigator.of(context).pop()),
-                  const SizedBox(width: 14),
-                  Text('Workshop', style: AppType.display),
+                  Expanded(
+                    child: Center(
+                      child: Text('Workshop', style: AppType.display),
+                    ),
+                  ),
+                  // Jump straight back to the live app (skips Settings).
+                  _CoinButton(
+                    icon: Icons.home_rounded,
+                    onTap: () => Navigator.of(context)
+                        .popUntil((route) => route.isFirst),
+                  ),
                 ],
               ),
               const SizedBox(height: 18),
@@ -159,63 +169,83 @@ class _HabitRow extends ConsumerWidget {
     final isGood = habit.type == HabitType.good;
     final tagColor = isGood ? AppColors.positive : AppColors.negative;
 
-    return Dismissible(
-      key: ValueKey(habit.id),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 22),
-        decoration: BoxDecoration(
-          color: AppColors.negative,
-          borderRadius: AppRadii.r(AppRadii.md),
-        ),
-        child: const Icon(Icons.delete_outline_rounded,
-            color: Colors.white, size: 26),
-      ),
-      onDismissed: (_) =>
-          ref.read(databaseProvider).softDeleteHabit(habit.id),
-      child: PopTappable(
-        onTap: () => openHabitSheet(context, habit),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-          decoration:
-              popSurface(fill: AppColors.paper, radius: AppRadii.md, stroke: 2),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: tagColor.withValues(alpha: 0.16),
-                  borderRadius: AppRadii.r(AppRadii.sm),
-                  border: Border.all(color: tagColor, width: 2),
-                ),
-                child: Icon(
-                    isGood
-                        ? Icons.check_rounded
-                        : Icons.shield_outlined,
-                    size: 20,
-                    color: tagColor),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(habit.title,
-                        style: AppType.body.copyWith(
-                            fontSize: 16, fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 2),
-                    Text(isGood ? 'GOOD' : 'BAD',
-                        style: AppType.caption.copyWith(color: tagColor)),
-                  ],
-                ),
-              ),
-              const Icon(Icons.edit_outlined, size: 21, color: AppColors.ink),
-            ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration:
+          popSurface(fill: AppColors.paper, radius: AppRadii.md, stroke: 2),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: tagColor.withValues(alpha: 0.16),
+              borderRadius: AppRadii.r(AppRadii.sm),
+              border: Border.all(color: tagColor, width: 2),
+            ),
+            child: Icon(isGood ? Icons.check_rounded : Icons.shield_outlined,
+                size: 20, color: tagColor),
           ),
-        ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(habit.title,
+                    style: AppType.body
+                        .copyWith(fontSize: 16, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text(isGood ? 'GOOD' : 'BAD',
+                    style: AppType.caption.copyWith(color: tagColor)),
+              ],
+            ),
+          ),
+          // Edit (pencil) + delete (bin) — same styling as the task rows.
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => openHabitSheet(context, habit),
+            child: const Padding(
+              padding: EdgeInsets.all(4),
+              child: Icon(Icons.edit_outlined, size: 21, color: AppColors.ink),
+            ),
+          ),
+          const SizedBox(width: 2),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () async {
+              final ok = await showConfirmDelete(context,
+                  message: 'Remove “${habit.title}”? Your logged\nhistory is kept.');
+              if (ok) ref.read(databaseProvider).softDeleteHabit(habit.id);
+            },
+            child: const Padding(
+              padding: EdgeInsets.all(4),
+              child: Icon(Icons.delete_outline_rounded,
+                  size: 21, color: AppColors.negative),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Small circular coin button (e.g. Home) matching the shell control size.
+class _CoinButton extends StatelessWidget {
+  const _CoinButton({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopTappable(
+      onTap: onTap,
+      child: Container(
+        width: AppSpace.shellControl,
+        height: AppSpace.shellControl,
+        alignment: Alignment.center,
+        decoration: popSurface(fill: AppColors.paper, radius: AppRadii.pill),
+        child: Icon(icon, size: 22, color: AppColors.ink),
       ),
     );
   }
@@ -308,11 +338,6 @@ class _HabitSheetState extends ConsumerState<_HabitSheet> {
     if (mounted) Navigator.of(context).pop();
   }
 
-  Future<void> _delete() async {
-    await ref.read(databaseProvider).softDeleteHabit(widget.existing!.id);
-    if (mounted) Navigator.of(context).pop();
-  }
-
   @override
   Widget build(BuildContext context) {
     final editing = widget.existing != null;
@@ -331,19 +356,8 @@ class _HabitSheetState extends ConsumerState<_HabitSheet> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(editing ? 'EDIT HABIT' : 'NEW HABIT',
-                          style: AppType.label.copyWith(fontSize: 16)),
-                      if (editing)
-                        PopTappable(
-                          onTap: _delete,
-                          child: const Icon(Icons.delete_outline_rounded,
-                              size: 24, color: AppColors.negative),
-                        ),
-                    ],
-                  ),
+                  Text(editing ? 'EDIT HABIT' : 'NEW HABIT',
+                      style: AppType.label.copyWith(fontSize: 16)),
                   const SizedBox(height: 14),
                   _field(_title, 'Title…', error: _titleError),
                   const SizedBox(height: 10),
