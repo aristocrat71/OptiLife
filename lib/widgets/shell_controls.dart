@@ -141,9 +141,12 @@ class _RingPainter extends CustomPainter {
 }
 
 /// Top-middle heartbeat-pulsing nav circle with outward ripple waves.
+/// [color] tints the button + ripple to the current section (animated).
 class CentralNav extends StatefulWidget {
-  const CentralNav({super.key, this.onTap});
+  const CentralNav(
+      {super.key, this.onTap, this.color = AppColors.popPurple});
   final VoidCallback? onTap;
+  final Color color;
 
   @override
   State<CentralNav> createState() => _CentralNavState();
@@ -166,47 +169,59 @@ class _CentralNavState extends State<CentralNav> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     const d = AppSpace.navCircle;
-    return SizedBox(
-      width: d + 24,
-      height: d + 24,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          IgnorePointer(
-            child: AnimatedBuilder(
-              animation: _ripple,
-              builder: (_, _) =>
-                  CustomPaint(size: const Size(d + 24, d + 24), painter: _RipplePainter(_ripple.value)),
-            ),
-          ),
-          ScaleTransition(
-            scale: Tween(begin: 1.0, end: 1.08).animate(
-                CurvedAnimation(parent: _beat, curve: Curves.easeInOut)),
-            child: PopTappable(
-              onTap: widget.onTap,
-              child: Container(
-                width: d,
-                height: d,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: AppColors.popPurple,
-                  shape: BoxShape.circle,
-                  border: Border.fromBorderSide(
-                      BorderSide(color: AppColors.ink, width: 3)),
+    // Tween the section color so swapping pages washes the heart + ripple over.
+    return TweenAnimationBuilder<Color?>(
+      tween: ColorTween(end: widget.color),
+      duration: AppMotion.fill,
+      curve: AppMotion.curveFill,
+      builder: (_, animColor, _) {
+        final c = animColor ?? widget.color;
+        return SizedBox(
+          width: d + 24,
+          height: d + 24,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              IgnorePointer(
+                child: AnimatedBuilder(
+                  animation: _ripple,
+                  builder: (_, _) => CustomPaint(
+                      size: const Size(d + 24, d + 24),
+                      painter: _RipplePainter(_ripple.value, c)),
                 ),
-                child: const Icon(Icons.favorite, color: Colors.white, size: 26),
               ),
-            ),
+              ScaleTransition(
+                scale: Tween(begin: 1.0, end: 1.08).animate(
+                    CurvedAnimation(parent: _beat, curve: Curves.easeInOut)),
+                child: PopTappable(
+                  onTap: widget.onTap,
+                  child: Container(
+                    width: d,
+                    height: d,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: c,
+                      shape: BoxShape.circle,
+                      border: const Border.fromBorderSide(
+                          BorderSide(color: AppColors.ink, width: 3)),
+                    ),
+                    child: const Icon(Icons.favorite,
+                        color: Colors.white, size: 26),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
 class _RipplePainter extends CustomPainter {
-  _RipplePainter(this.t);
+  _RipplePainter(this.t, this.color);
   final double t;
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -221,13 +236,13 @@ class _RipplePainter extends CustomPainter {
       final paint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3
-        ..color = AppColors.popPurple.withValues(alpha: alpha);
+        ..color = color.withValues(alpha: alpha);
       canvas.drawCircle(c, radius, paint);
     }
   }
 
   @override
-  bool shouldRepaint(_RipplePainter old) => old.t != t;
+  bool shouldRepaint(_RipplePainter old) => old.t != t || old.color != color;
 }
 
 /// Top-right circular calendar button. [isToday] toggles the off-today badge.

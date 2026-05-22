@@ -10,6 +10,7 @@ import '../widgets/day_pager.dart';
 import '../widgets/pop_tappable.dart';
 import '../widgets/quest_card.dart';
 import '../widgets/shell_controls.dart';
+import '../widgets/warp_button.dart';
 
 /// Landing screen: today's rolled quests + reroll. Wired to
 /// [rolledQuestsForSelectedDateProvider] and [GameRepository].
@@ -77,7 +78,7 @@ class _SideQuestPageState extends ConsumerState<SideQuestPage> {
             child: _empty(
               const _RollingDice(),
               'Side Quests not determined.\nThey roll on the day itself.',
-              action: _WarpButton(onTap: _goToToday),
+              action: WarpButton(onTap: _goToToday),
             ),
           )
         else
@@ -92,7 +93,7 @@ class _SideQuestPageState extends ConsumerState<SideQuestPage> {
                       isPast
                           ? 'No quests were rolled this day.'
                           : 'No active quests — add some in the Workshop.',
-                      action: isPast ? _WarpButton(onTap: _goToToday) : null,
+                      action: isPast ? WarpButton(onTap: _goToToday) : null,
                     )
                   : _fadeEdges(
                       // No stretch/bounce overscroll on the quest box.
@@ -261,78 +262,6 @@ class _GentleBouncePhysics extends BouncingScrollPhysics {
   @override
   double frictionFactor(double overscrollFraction) =>
       0.18 * math.pow(1 - overscrollFraction, 2);
-}
-
-/// "Warp to Present" — a space-themed button: a deep-space gradient pill with a
-/// twinkling starfield drifting through it and a gently pulsing purple glow.
-class _WarpButton extends StatefulWidget {
-  const _WarpButton({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  State<_WarpButton> createState() => _WarpButtonState();
-}
-
-class _WarpButtonState extends State<_WarpButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(seconds: 4))
-        ..repeat();
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return PopTappable(
-      onTap: widget.onTap,
-      child: AnimatedBuilder(
-        animation: _c,
-        builder: (_, _) {
-          final pulse = 0.5 + 0.5 * math.sin(_c.value * 2 * math.pi);
-          return Container(
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF2A2350), Color(0xFF5B45C9)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: AppRadii.r(AppRadii.pill),
-              border: Border.all(color: AppColors.ink, width: 2.5),
-              boxShadow: [
-                BoxShadow(
-                  color:
-                      AppColors.popPurple.withValues(alpha: 0.25 + 0.3 * pulse),
-                  blurRadius: 10 + 10 * pulse,
-                  spreadRadius: 1,
-                ),
-              ],
-            ),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: CustomPaint(painter: _StarfieldPainter(_c.value)),
-                ),
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
-                  child: Text('WARP TO PRESENT',
-                      style: AppType.label.copyWith(
-                          fontSize: 15,
-                          color: AppColors.cream,
-                          letterSpacing: 0.8)),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
 }
 
 /// The reroll button's die — a slow, gentle bounce + wobble (calmer than the
@@ -543,39 +472,4 @@ class _RollingDiceState extends State<_RollingDice>
       ],
     );
   }
-}
-
-/// Slowly drifting, twinkling stars painted inside the warp button.
-class _StarfieldPainter extends CustomPainter {
-  _StarfieldPainter(this.t);
-  final double t;
-
-  // Fixed pseudo-random field: (x, y, twinklePhase, radius) in unit coords.
-  static final List<(double, double, double, double)> _stars = () {
-    final r = math.Random(42);
-    return [
-      for (var i = 0; i < 16; i++)
-        (r.nextDouble(), r.nextDouble(), r.nextDouble(),
-            0.7 + r.nextDouble() * 1.8),
-    ];
-  }();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint();
-    for (final (x, y, phase, radius) in _stars) {
-      // One full drift per loop → the reset frame matches the start (no seam).
-      final nx = (x + t) % 1.0;
-      final twinkle = 0.5 + 0.5 * math.sin((t + phase) * 2 * math.pi);
-      // Fade in at the left edge / out at the right so the wrap is invisible.
-      final edge = math.sin(nx * math.pi);
-      paint.color =
-          Colors.white.withValues(alpha: (0.3 + 0.7 * twinkle) * edge * 0.85);
-      canvas.drawCircle(
-          Offset(nx * size.width, y * size.height), radius, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_StarfieldPainter old) => old.t != t;
 }

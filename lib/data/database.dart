@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../core/date_utils.dart';
 import '../core/enums.dart'; // enum types referenced by the generated part
 import 'seed_quests.dart';
 import 'tables.dart';
@@ -117,6 +118,53 @@ class AppDatabase extends _$AppDatabase {
   Stream<List<TreeRow>> watchTrees() => (select(trees)
         ..orderBy([(t) => OrderingTerm(expression: t.plantedAt)]))
       .watch();
+
+  // ── task writes (no LE — Data Models §4.8) ──
+  Future<void> addTask(String title, String? description, DateTime dueDate) =>
+      into(tasks).insert(TasksCompanion.insert(
+        title: title,
+        description: Value(description),
+        dueDate: dateOnly(dueDate),
+      ));
+
+  Future<void> updateTask(
+          String id, String title, String? description, DateTime dueDate) =>
+      (update(tasks)..where((t) => t.id.equals(id))).write(TasksCompanion(
+        title: Value(title),
+        description: Value(description),
+        dueDate: Value(dateOnly(dueDate)),
+        lastModified: Value(DateTime.now()),
+      ));
+
+  Future<void> setTaskComplete(String id, bool done) =>
+      (update(tasks)..where((t) => t.id.equals(id))).write(TasksCompanion(
+        completedAt: Value(done ? DateTime.now() : null),
+        lastModified: Value(DateTime.now()),
+      ));
+
+  Future<void> deleteTask(String id) =>
+      (delete(tasks)..where((t) => t.id.equals(id))).go();
+
+  /// Copies the previous calendar day's tasks onto [targetDate] (fresh, not
+  /// completed). Returns how many were copied.
+  Future<int> copyTasksFromPreviousDay(DateTime targetDate) async {
+    final to = dateOnly(targetDate);
+    final from = dateOnly(to.subtract(const Duration(days: 1)));
+    final prev =
+        await (select(tasks)..where((t) => t.dueDate.equals(from))).get();
+    if (prev.isEmpty) return 0;
+    await batch((b) {
+      b.insertAll(
+        tasks,
+        prev.map((t) => TasksCompanion.insert(
+              title: t.title,
+              description: Value(t.description),
+              dueDate: to,
+            )),
+      );
+    });
+    return prev.length;
+  }
 }
 
 /// A rolled quest plus whether it's been completed on the viewed day.
