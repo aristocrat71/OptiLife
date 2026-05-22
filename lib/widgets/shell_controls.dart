@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -6,50 +7,109 @@ import '../theme/theme.dart';
 import 'pop_tappable.dart';
 
 /// Top-left circular LE ring gauge (48×48). [fraction] is 0..1 progress within
-/// the current level; [level] shows in the corner badge.
-class LeRingGauge extends StatelessWidget {
-  const LeRingGauge({super.key, required this.level, required this.fraction, this.onTap});
+/// the current level; [level] shows in the corner badge. Tapping reveals the
+/// exact `into/goal` (e.g. `34 / 50`) for ~2s with a fade in/out.
+class LeRingGauge extends StatefulWidget {
+  const LeRingGauge({
+    super.key,
+    required this.level,
+    required this.fraction,
+    required this.into,
+    required this.goal,
+  });
   final int level;
   final double fraction;
-  final VoidCallback? onTap;
+  final int into;
+  final int goal;
+
+  @override
+  State<LeRingGauge> createState() => _LeRingGaugeState();
+}
+
+class _LeRingGaugeState extends State<LeRingGauge> {
+  bool _showLabel = false;
+  Timer? _timer;
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _flashLabel() {
+    setState(() => _showLabel = true);
+    _timer?.cancel();
+    _timer = Timer(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _showLabel = false);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return PopTappable(
-      onTap: onTap,
-      child: SizedBox(
-        width: AppSpace.shellControl,
-        height: AppSpace.shellControl,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            DecoratedBox(
-              decoration: popSurface(radius: AppRadii.pill),
-              child: const SizedBox.expand(),
-            ),
-            Positioned.fill(
-              child: CustomPaint(painter: _RingPainter(fraction.clamp(0, 1))),
-            ),
-            const Center(child: Icon(Icons.bolt, size: 18, color: AppColors.energy)),
-            Positioned(
-              right: -3,
-              bottom: -3,
-              child: Container(
-                width: 20,
-                height: 20,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: AppColors.popPurple,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.ink, width: 2),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        PopTappable(
+          onTap: _flashLabel,
+          child: SizedBox(
+            width: AppSpace.shellControl,
+            height: AppSpace.shellControl,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                DecoratedBox(
+                  decoration: popSurface(radius: AppRadii.pill),
+                  child: const SizedBox.expand(),
                 ),
-                child: Text('$level',
-                    style: AppType.label.copyWith(fontSize: 11, color: Colors.white)),
+                Positioned.fill(
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(end: widget.fraction.clamp(0, 1)),
+                    duration: AppMotion.fill,
+                    curve: AppMotion.curveFill,
+                    builder: (_, v, _) => CustomPaint(painter: _RingPainter(v)),
+                  ),
+                ),
+                const Center(
+                    child: Icon(Icons.bolt, size: 18, color: AppColors.energy)),
+                Positioned(
+                  right: -3,
+                  bottom: -3,
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppColors.popPurple,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.ink, width: 2),
+                    ),
+                    child: Text('${widget.level}',
+                        style: AppType.label
+                            .copyWith(fontSize: 11, color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Progress label, fades in on tap then out after 2s.
+        Positioned(
+          top: AppSpace.shellControl + 6,
+          left: -6,
+          child: IgnorePointer(
+            child: AnimatedOpacity(
+              opacity: _showLabel ? 1 : 0,
+              duration: const Duration(milliseconds: 280),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: popSurface(radius: AppRadii.pill, stroke: 2, shadow: false),
+                child: Text('${widget.into} / ${widget.goal}',
+                    style: AppType.label.copyWith(fontSize: 13)),
               ),
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -151,14 +211,17 @@ class _RipplePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
-    const base = 35.0, spread = 24.0;
+    const base = 33.0, spread = 26.0;
     for (var i = 0; i < 3; i++) {
       final phase = (t + i / 3) % 1.0;
       final radius = base + spread * phase;
+      // Sine envelope: fades in from 0, peaks mid-expansion, fades to 0 — so
+      // rings never pop in/out at the loop boundary.
+      final alpha = 0.42 * math.sin(phase * math.pi);
       final paint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3
-        ..color = AppColors.popPurple.withValues(alpha: 0.42 * (1 - phase));
+        ..color = AppColors.popPurple.withValues(alpha: alpha);
       canvas.drawCircle(c, radius, paint);
     }
   }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/game_repository.dart';
 import '../state/app_providers.dart';
 import '../theme/theme.dart';
+import '../widgets/day_pager.dart';
 import '../widgets/quest_card.dart';
 import '../widgets/shell_controls.dart';
 
@@ -57,16 +58,16 @@ class _SideQuestPageState extends ConsumerState<SideQuestPage> {
     final quests = ref.watch(rolledQuestsForSelectedDateProvider);
     final date = ref.watch(selectedDateProvider);
 
-    return ListView(
+    return DayPager(
       padding: const EdgeInsets.fromLTRB(
-          AppSpace.screenGutter, 128, AppSpace.screenGutter, 110),
+          AppSpace.screenGutter, 128, AppSpace.screenGutter, 24),
       children: [
         DateDisplay(date: date),
         const SizedBox(height: 16),
         _header(quests.asData?.value),
         const SizedBox(height: 16),
         if (isFuture)
-          _empty('🎲', 'Quests roll fresh on the day itself.\nCome back then!')
+          _empty('🔮', 'Side Quests not determined.\nThey roll on the day itself.')
         else
           quests.when(
             loading: () => const Padding(
@@ -121,32 +122,30 @@ class _SideQuestPageState extends ConsumerState<SideQuestPage> {
   }
 
   Widget _rerollButton() {
-    return Center(
-      child: GestureDetector(
-        onTap: _onReroll,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 16),
-          decoration:
-              popSurface(fill: AppColors.energy, radius: AppRadii.lg, stroke: 3),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text('REROLL', style: AppType.label.copyWith(fontSize: 20)),
-            const SizedBox(height: 8),
-            const Icon(Icons.casino_rounded, size: 30, color: AppColors.ink),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
-              decoration: BoxDecoration(
-                  color: AppColors.ink,
-                  borderRadius: AppRadii.r(AppRadii.sm)),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Text('10',
-                    style: AppType.label
-                        .copyWith(fontSize: 15, color: AppColors.cream)),
-                const Icon(Icons.bolt, size: 14, color: AppColors.energy),
-              ]),
-            ),
-          ]),
-        ),
+    // Wide horizontal pill pinned below the list (design §5).
+    return GestureDetector(
+      onTap: _onReroll,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+        decoration:
+            popSurface(fill: AppColors.energy, radius: AppRadii.pill, stroke: 3),
+        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          const Icon(Icons.casino_rounded, size: 22, color: AppColors.ink),
+          const SizedBox(width: 10),
+          Text('REROLL TODAY', style: AppType.label.copyWith(fontSize: 16)),
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+                color: AppColors.ink, borderRadius: AppRadii.r(AppRadii.sm)),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Text('-10',
+                  style: AppType.label
+                      .copyWith(fontSize: 13, color: AppColors.cream)),
+              const Icon(Icons.bolt, size: 13, color: AppColors.energy),
+            ]),
+          ),
+        ]),
       ),
     );
   }

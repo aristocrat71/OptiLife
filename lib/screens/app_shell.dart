@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../state/app_providers.dart'; // re-exports dateOnly + le_math helpers
 import '../theme/theme.dart';
+import '../widgets/pop_tappable.dart';
+import '../widgets/radial_menu.dart';
 import '../widgets/shell_controls.dart';
 import 'placeholder_pages.dart';
 import 'side_quest_page.dart';
@@ -27,32 +29,39 @@ class _AppShellState extends ConsumerState<AppShell> {
     super.dispose();
   }
 
-  void _jump(int i) {
-    _controller.animateToPage(i,
-        duration: AppMotion.pop, curve: AppMotion.curvePop);
-    Navigator.of(context).maybePop();
-  }
-
-  void _openNav() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _NavSheet(onPick: _jump),
-    );
+  Future<void> _openNav() async {
+    final i = await showRadialMenu(context);
+    if (i != null && mounted) {
+      _controller.animateToPage(i,
+          duration: AppMotion.pop, curve: AppMotion.curvePop);
+    }
   }
 
   Future<void> _pickDate() async {
     final now = DateTime.now();
-    final picked = await showDatePicker(
+    // Calendar grid that commits the moment a day is tapped — no OK/Cancel.
+    final picked = await showDialog<DateTime>(
       context: context,
-      initialDate: ref.read(selectedDateProvider),
-      firstDate: DateTime(now.year - 1),
-      lastDate: DateTime(now.year + 1),
+      builder: (ctx) => Dialog(
+        child: SizedBox(
+          width: 340,
+          height: 380,
+          child: CalendarDatePicker(
+            initialDate: ref.read(selectedDateProvider),
+            firstDate: DateTime(now.year - 1),
+            lastDate: DateTime(now.year + 1),
+            onDateChanged: (d) => Navigator.of(ctx).pop(d),
+          ),
+        ),
+      ),
     );
     if (picked != null) {
       ref.read(selectedDateProvider.notifier).state = dateOnly(picked);
     }
   }
+
+  void _goToToday() =>
+      ref.read(selectedDateProvider.notifier).state = dateOnly(DateTime.now());
 
   @override
   Widget build(BuildContext context) {
@@ -66,19 +75,29 @@ class _AppShellState extends ConsumerState<AppShell> {
           if (_index != 0)
             Positioned.fill(
               child: IgnorePointer(
-                child: CustomPaint(
-                    painter: _LiquidPainter(leIntoLevel(le) / 50)),
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(end: leIntoLevel(le) / 50),
+                  duration: AppMotion.fill,
+                  curve: AppMotion.curveFill,
+                  builder: (_, v, _) =>
+                      CustomPaint(painter: _LiquidPainter(v)),
+                ),
               ),
             ),
-          PageView(
-            controller: _controller,
-            onPageChanged: (i) => setState(() => _index = i),
-            children: const [
-              BiomePage(),
-              SideQuestPage(),
-              TasksPage(),
-              JournalPage(),
-            ],
+          // Reserve the bottom band so page content never sits under the dots.
+          Padding(
+            padding:
+                EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 40),
+            child: PageView(
+              controller: _controller,
+              onPageChanged: (i) => setState(() => _index = i),
+              children: const [
+                BiomePage(),
+                SideQuestPage(),
+                TasksPage(),
+                JournalPage(),
+              ],
+            ),
           ),
           // sticky shell
           Positioned(
@@ -95,15 +114,17 @@ class _AppShellState extends ConsumerState<AppShell> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     LeRingGauge(
-                        level: currentLevel(le), fraction: leIntoLevel(le) / 50),
+                      level: currentLevel(le),
+                      fraction: leIntoLevel(le) / 50,
+                      into: leIntoLevel(le),
+                      goal: 50,
+                    ),
                     CentralNav(onTap: _openNav),
                     CalendarButton(
                       isToday: isToday,
-                      onTap: isToday
-                          ? null
-                          : () => ref
-                              .read(selectedDateProvider.notifier)
-                              .state = dateOnly(DateTime.now()),
+                      // §5.3: off-today tap springs back to today; long-press
+                      // (or tap while already on today) opens the picker.
+                      onTap: isToday ? _pickDate : _goToToday,
                       onLongPress: _pickDate,
                     ),
                   ],
@@ -111,6 +132,18 @@ class _AppShellState extends ConsumerState<AppShell> {
               ),
             ),
           ),
+          // "Go to Present" — only when viewing another day. Floats above the
+          // page dots so it never collides with the date display / header.
+          if (!isToday)
+            Positioned(
+              bottom: AppSpace.pageDotsInset + 30,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                top: false,
+                child: Center(child: _GoToPresentPill(onTap: _goToToday)),
+              ),
+            ),
           Positioned(
             bottom: AppSpace.pageDotsInset,
             left: 0,
@@ -125,38 +158,25 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 }
 
-class _NavSheet extends StatelessWidget {
-  const _NavSheet({required this.onPick});
-  final void Function(int) onPick;
+/// Floating pill that returns the global date to today. Shown only off-today.
+class _GoToPresentPill extends StatelessWidget {
+  const _GoToPresentPill({required this.onTap});
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    Widget item(IconData icon, String label, int index, Color c) => ListTile(
-          leading: CircleAvatar(backgroundColor: c, child: Icon(icon, color: Colors.white)),
-          title: Text(label, style: AppType.bodyL),
-          onTap: () => onPick(index),
-        );
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.paper,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.xl)),
-        border: Border(top: BorderSide(color: AppColors.ink, width: 3)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const SizedBox(height: 12),
-          Container(
-              width: 40,
-              height: 5,
-              decoration: BoxDecoration(
-                  color: AppColors.hazeDeep,
-                  borderRadius: BorderRadius.circular(AppRadii.pill))),
-          item(Icons.park_rounded, 'Biome', 0, const Color(0xFF7AC974)),
-          item(Icons.flag_rounded, 'Side Quests', 1, AppColors.popPurple),
-          item(Icons.check_box_rounded, 'Tasks', 2, AppColors.popPink),
-          item(Icons.menu_book_rounded, 'Journal + Habits', 3, AppColors.popTeal),
-          const SizedBox(height: 12),
+    return PopTappable(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+        decoration: popSurface(
+            fill: AppColors.popPink, radius: AppRadii.pill, stroke: 2.5),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.today_rounded, size: 16, color: AppColors.cream),
+          const SizedBox(width: 7),
+          Text('GO TO PRESENT',
+              style: AppType.label
+                  .copyWith(fontSize: 13, color: AppColors.cream)),
         ]),
       ),
     );
