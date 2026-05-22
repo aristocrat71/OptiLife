@@ -30,8 +30,13 @@ class SettingsPage extends ConsumerWidget {
               child: Row(
                 children: [
                   BackCoin(onTap: () => Navigator.of(context).pop()),
-                  const SizedBox(width: 14),
-                  Text('Settings', style: AppType.display),
+                  Expanded(
+                    child: Center(
+                      child: Text('Settings', style: AppType.display),
+                    ),
+                  ),
+                  // Balances the back coin so the title sits truly centered.
+                  const SizedBox(width: AppSpace.shellControl),
                 ],
               ),
             ),
@@ -148,11 +153,47 @@ class SettingsPage extends ConsumerWidget {
       );
 
   static void _showAbout(BuildContext context) {
-    showAboutDialog(
+    showGeneralDialog<void>(
       context: context,
-      applicationName: 'OptiLife',
-      applicationVersion: '1.0.0',
-      applicationLegalese: 'Level up your life, one quest at a time.',
+      barrierDismissible: true,
+      barrierLabel: 'About',
+      barrierColor: AppColors.ink.withValues(alpha: AppZ.scrim),
+      transitionDuration: AppMotion.pop,
+      pageBuilder: (ctx, _, _) => Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 44),
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 22),
+            decoration: popSurface(
+                fill: AppColors.paper, radius: AppRadii.lg, stroke: 3),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.bolt, size: 40, color: AppColors.energy),
+                const SizedBox(height: 8),
+                Text('OptiLife', style: AppType.display.copyWith(fontSize: 26)),
+                const SizedBox(height: 4),
+                Text('Version 1.0.0',
+                    style:
+                        AppType.caption.copyWith(color: AppColors.textMuted)),
+                const SizedBox(height: 12),
+                Text('Level up your life, one quest at a time.',
+                    textAlign: TextAlign.center,
+                    style: AppType.body.copyWith(color: AppColors.textMuted)),
+              ],
+            ),
+          ),
+        ),
+      ),
+      transitionBuilder: (_, anim, _, child) {
+        final curved = CurvedAnimation(parent: anim, curve: AppMotion.curvePop);
+        return FadeTransition(
+          opacity: anim,
+          child: ScaleTransition(
+              scale: Tween(begin: 0.7, end: 1.0).animate(curved), child: child),
+        );
+      },
     );
   }
 }
