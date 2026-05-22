@@ -43,8 +43,7 @@ class AppDatabase extends _$AppDatabase {
             // 6-quest experiment; safe to squash before release.)
             await (update(settings)..where((t) => t.id.equals(1)))
                 .write(const SettingsCompanion(questsPerDay: Value(3)));
-            final now = DateTime.now();
-            final today = DateTime(now.year, now.month, now.day);
+            final today = dateOnly(DateTime.now());
             await (delete(dailyQuestRolls)..where((t) => t.date.equals(today)))
                 .go();
           }

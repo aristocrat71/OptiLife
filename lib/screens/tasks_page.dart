@@ -9,7 +9,6 @@ import '../theme/theme.dart';
 import '../widgets/day_pager.dart';
 import '../widgets/pop_calendar.dart';
 import '../widgets/pop_tappable.dart';
-import '../widgets/shell_controls.dart';
 import '../widgets/warp_button.dart';
 
 /// Calm life-admin (`03-tasks.md`): tasks scoped to the selected date, **no LE,
@@ -21,7 +20,6 @@ class TasksPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isPast = ref.watch(isPastProvider);
-    final date = ref.watch(selectedDateProvider);
     final tasksAsync = ref.watch(tasksForSelectedDateProvider);
 
     return Stack(
@@ -29,13 +27,11 @@ class TasksPage extends ConsumerWidget {
         DayPager(
           padding: const EdgeInsets.fromLTRB(
             AppSpace.screenGutter,
-            128,
+            184,
             AppSpace.screenGutter,
             24,
           ),
           children: [
-            DateDisplay(date: date),
-            const SizedBox(height: 16),
             _header(tasksAsync.asData?.value),
             const SizedBox(height: 16),
             Expanded(

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +12,6 @@ import '../widgets/day_pager.dart';
 import '../widgets/journal_style_sheet.dart';
 import '../widgets/level_up_overlay.dart';
 import '../widgets/pop_tappable.dart';
-import '../widgets/shell_controls.dart';
 import '../widgets/warp_button.dart';
 import 'workshop_page.dart';
 
@@ -25,14 +25,6 @@ import 'workshop_page.dart';
 class JournalPage extends ConsumerWidget {
   const JournalPage({super.key});
 
-  static const _months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
-  ];
-  static const _days = [
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final date = ref.watch(selectedDateProvider);
@@ -41,16 +33,14 @@ class JournalPage extends ConsumerWidget {
 
     return DayPager(
       padding: const EdgeInsets.fromLTRB(
-          AppSpace.screenGutter, 128, AppSpace.screenGutter, 24),
+          AppSpace.screenGutter, 184, AppSpace.screenGutter, 24),
       children: [
-        DateDisplay(date: date),
-        const SizedBox(height: 16),
         if (isFuture)
           Expanded(child: _futureEmpty(ref))
         else ...[
           _HabitsStrip(readOnly: isPast),
           const SizedBox(height: 18),
-          _journalHeader(context, date),
+          _journalHeader(context),
           const SizedBox(height: 10),
           Expanded(child: _JournalSection(date: date, readOnly: isPast)),
         ],
@@ -58,34 +48,13 @@ class JournalPage extends ConsumerWidget {
     );
   }
 
-  Widget _journalHeader(BuildContext context, DateTime date) {
-    final label =
-        '${_days[date.weekday - 1]} ${date.day} ${_months[date.month - 1]}';
+  Widget _journalHeader(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text('JOURNAL',
-                      style: AppType.label
-                          .copyWith(fontSize: 14, color: AppColors.popTeal)),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text('· $label',
-                        overflow: TextOverflow.ellipsis,
-                        style: AppType.label.copyWith(
-                            fontSize: 14, color: AppColors.textMuted)),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+        Text('JOURNAL',
+            style: AppType.label.copyWith(fontSize: 16, color: AppColors.popTeal)),
         PopTappable(
           onTap: () => showJournalStyleSheet(context),
           child: Container(
@@ -112,19 +81,20 @@ class JournalPage extends ConsumerWidget {
   }
 
   Widget _futureEmpty(WidgetRef ref) {
-    return Center(
+    // Top-aligned at the same height as the Side Quests future doodle: that
+    // screen reserves header (~38) + 16 + a 48px lead-in before its animation;
+    // this branch has no header, so we pad the equivalent space.
+    return Padding(
+      padding: const EdgeInsets.only(top: 102),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('🌅', style: TextStyle(fontSize: 52)),
-          const SizedBox(height: 14),
-          Text('Habits & journal\nopen up on the day.',
+          const _TimeWarpClock(),
+          const SizedBox(height: 12),
+          Text('No time travel available to\njournal your future self…',
               textAlign: TextAlign.center,
               style: AppType.display
-                  .copyWith(fontSize: 22, color: AppColors.textMuted)),
-          const SizedBox(height: 6),
-          Text('See you then!',
-              style: AppType.body.copyWith(color: AppColors.textMuted)),
+                  .copyWith(fontSize: 21, color: AppColors.textMuted)),
           const SizedBox(height: 22),
           WarpButton(
             onTap: () => ref.read(selectedDateProvider.notifier).state =
@@ -134,6 +104,133 @@ class JournalPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// A clock nucleus with electrons orbiting it like an atom — a little
+/// "time machine" doodle for the future-date journal state. The hands turn
+/// gently; the electrons trace tilted elliptical orbits around the face.
+class _TimeWarpClock extends StatefulWidget {
+  const _TimeWarpClock();
+  @override
+  State<_TimeWarpClock> createState() => _TimeWarpClockState();
+}
+
+class _TimeWarpClockState extends State<_TimeWarpClock>
+    with SingleTickerProviderStateMixin {
+  // Slower loop than before so the hands drift rather than race.
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 4200))
+        ..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 118,
+      height: 118,
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (_, _) => CustomPaint(painter: _TimeWarpPainter(_c.value)),
+      ),
+    );
+  }
+}
+
+class _TimeWarpPainter extends CustomPainter {
+  _TimeWarpPainter(this.t);
+  final double t; // 0..1 loop
+
+  // Electron orbits: (tilt, integer speed for a seamless loop, colour, phase).
+  static const _orbits = [
+    (tilt: 0.0, speed: 2, color: AppColors.popPink, phase: 0.0),
+    (tilt: 1.0472, speed: -2, color: AppColors.popTeal, phase: 0.33), // 60°
+    (tilt: 2.0944, speed: 3, color: AppColors.popPurple, phase: 0.66), // 120°
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    const r = 30.0; // nucleus radius
+    const tau = 2 * math.pi;
+    const a = 52.0, b = 18.0; // orbit semi-axes
+
+    // 1) Orbit paths (behind the nucleus).
+    final orbitPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..color = AppColors.ink.withValues(alpha: 0.22);
+    for (final o in _orbits) {
+      canvas.save();
+      canvas.translate(c.dx, c.dy);
+      canvas.rotate(o.tilt);
+      canvas.drawOval(
+          Rect.fromCenter(center: Offset.zero, width: a * 2, height: b * 2),
+          orbitPaint);
+      canvas.restore();
+    }
+
+    // 2) Nucleus = the clock face.
+    canvas.drawCircle(c, r, Paint()..color = AppColors.paper);
+    canvas.drawCircle(
+        c,
+        r,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..color = AppColors.ink);
+    final tick = Paint()
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round
+      ..color = AppColors.ink.withValues(alpha: 0.4);
+    for (var i = 0; i < 12; i++) {
+      final ang = i / 12 * tau;
+      final dir = Offset(math.sin(ang), -math.cos(ang));
+      canvas.drawLine(c + dir * (r - 5), c + dir * (r - 2), tick);
+    }
+    // Gentle hands (minute slow, hour slower).
+    _hand(canvas, c, t * tau * 2, r * 0.76, 3, AppColors.popPurple);
+    _hand(canvas, c, t * tau * 1, r * 0.48, 4, AppColors.ink);
+    canvas.drawCircle(c, 3.5, Paint()..color = AppColors.ink);
+
+    // 3) Electrons orbit on top.
+    for (final o in _orbits) {
+      final theta = (t * o.speed + o.phase) * tau;
+      final local = Offset(a * math.cos(theta), b * math.sin(theta));
+      final pos = c + _rot(local, o.tilt);
+      canvas.drawCircle(pos, 4.5, Paint()..color = o.color);
+      canvas.drawCircle(
+          pos,
+          4.5,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.5
+            ..color = AppColors.ink);
+    }
+  }
+
+  Offset _rot(Offset p, double a) => Offset(
+        p.dx * math.cos(a) - p.dy * math.sin(a),
+        p.dx * math.sin(a) + p.dy * math.cos(a),
+      );
+
+  void _hand(Canvas canvas, Offset c, double ang, double len, double w, Color col) {
+    final end = c + Offset(math.sin(ang), -math.cos(ang)) * len;
+    canvas.drawLine(
+        c,
+        end,
+        Paint()
+          ..strokeWidth = w
+          ..strokeCap = StrokeCap.round
+          ..color = col);
+  }
+
+  @override
+  bool shouldRepaint(_TimeWarpPainter old) => old.t != t;
 }
 
 // ─────────────────────────────────── Habits strip ───────────────────────────
@@ -179,7 +276,7 @@ class _HabitsStrip extends ConsumerWidget {
           _noHabitsPrompt(context)
         else
           SizedBox(
-            height: 124,
+            height: 96,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
@@ -215,7 +312,7 @@ class _HabitsStrip extends ConsumerWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text('No habits yet — add some in the Workshop.',
+            child: Text('No habits? Want to build some?',
                 style: AppType.body.copyWith(color: AppColors.textMuted)),
           ),
           const SizedBox(width: 10),
@@ -262,12 +359,11 @@ class _HabitChip extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final typeColor = _isGood ? AppColors.positive : AppColors.negative;
-    final actionLabel = _isGood ? 'DONE' : 'AVOIDED';
     final actionIcon = _isGood ? Icons.check_rounded : Icons.shield_rounded;
 
     final chip = Container(
-      width: 132,
-      padding: const EdgeInsets.fromLTRB(12, 11, 12, 12),
+      width: 122,
+      padding: const EdgeInsets.fromLTRB(12, 10, 10, 11),
       decoration: popSurface(
         fill: readOnly ? AppColors.surfaceSunk : AppColors.paper,
         radius: AppRadii.md,
@@ -276,8 +372,9 @@ class _HabitChip extends ConsumerWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          // Tag + the toggle check/shield sit on one line, so the chip can
+          // stay short — the dot beside the tag *is* the log control.
           Row(
             children: [
               Container(
@@ -292,28 +389,19 @@ class _HabitChip extends ConsumerWidget {
                         .copyWith(color: Colors.white, fontSize: 10)),
               ),
               const Spacer(),
-              if (_logged)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('+2',
-                        style: AppType.label.copyWith(
-                            fontSize: 11, color: AppColors.popTeal)),
-                    const Icon(Icons.bolt, size: 12, color: AppColors.energy),
-                  ],
-                ),
+              _toggleDot(actionIcon),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            habit.title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppType.body
-                .copyWith(fontSize: 14, fontWeight: FontWeight.w700),
-          ),
           const SizedBox(height: 8),
-          _actionPill(actionLabel, actionIcon),
+          Flexible(
+            child: Text(
+              habit.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppType.body
+                  .copyWith(fontSize: 14, fontWeight: FontWeight.w700),
+            ),
+          ),
         ],
       ),
     );
@@ -322,34 +410,28 @@ class _HabitChip extends ConsumerWidget {
     return PopTappable(onTap: () => _toggle(context, ref), child: chip);
   }
 
-  Widget _actionPill(String label, IconData icon) {
+  /// The check (good) / shield (bad) dot — outline when unlogged, filled
+  /// `positive` when logged.
+  Widget _toggleDot(IconData icon) {
     return AnimatedContainer(
       duration: AppMotion.pop,
       curve: AppMotion.curvePop,
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 7),
+      width: 26,
+      height: 26,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: _logged ? AppColors.positive : Colors.transparent,
-        borderRadius: AppRadii.r(AppRadii.sm),
+        shape: BoxShape.circle,
         border: Border.all(
-          color: _logged ? AppColors.positive : AppColors.ink,
+          color: _logged
+              ? AppColors.positive
+              : (readOnly ? AppColors.catNormal : AppColors.ink),
           width: 2,
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (_logged) ...[
-            Icon(icon, size: 14, color: Colors.white),
-            const SizedBox(width: 4),
-          ],
-          Text(label,
-              style: AppType.label.copyWith(
-                  fontSize: 12,
-                  color: _logged ? Colors.white : AppColors.ink)),
-        ],
-      ),
+      child: Icon(icon,
+          size: 15,
+          color: _logged ? Colors.white : AppColors.mutedInk),
     );
   }
 }

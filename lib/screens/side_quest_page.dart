@@ -9,7 +9,6 @@ import '../theme/theme.dart';
 import '../widgets/day_pager.dart';
 import '../widgets/pop_tappable.dart';
 import '../widgets/quest_card.dart';
-import '../widgets/shell_controls.dart';
 import '../widgets/warp_button.dart';
 
 /// Landing screen: today's rolled quests + reroll. Wired to
@@ -60,14 +59,11 @@ class _SideQuestPageState extends ConsumerState<SideQuestPage> {
     final isPast = ref.watch(isPastProvider);
     final isFuture = ref.watch(isFutureProvider);
     final quests = ref.watch(rolledQuestsForSelectedDateProvider);
-    final date = ref.watch(selectedDateProvider);
 
     return DayPager(
       padding: const EdgeInsets.fromLTRB(
-          AppSpace.screenGutter, 128, AppSpace.screenGutter, 24),
+          AppSpace.screenGutter, 184, AppSpace.screenGutter, 24),
       children: [
-        DateDisplay(date: date),
-        const SizedBox(height: 16),
         _header(quests.asData?.value),
         const SizedBox(height: 16),
         // The quest cards live in their own scrollable box (so a long list
