@@ -8,7 +8,9 @@ import '../theme/theme.dart';
 import '../widgets/pop_calendar.dart';
 import '../widgets/radial_menu.dart';
 import '../widgets/shell_controls.dart';
+import 'journal_page.dart';
 import 'placeholder_pages.dart';
+import 'settings_page.dart';
 import 'side_quest_page.dart';
 import 'tasks_page.dart';
 
@@ -32,7 +34,13 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   Future<void> _openNav() async {
     final i = await showRadialMenu(context);
-    if (i != null && mounted) _goToPage(i);
+    if (i == null || !mounted) return;
+    if (i == kRadialSettings) {
+      Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => const SettingsPage()));
+    } else {
+      _goToPage(i);
+    }
   }
 
   void _goToPage(int i) => _controller.animateToPage(i,
@@ -116,11 +124,51 @@ class _AppShellState extends ConsumerState<AppShell> {
     );
   }
 
+  /// The sticky date display, positioned where each page used to render it
+  /// (absolute top, tuned to clear the shell controls). Opacity tracks the
+  /// horizontal swipe so it dissolves on the way into Biome and is solid
+  /// elsewhere; a date change cross-fades the new day in.
+  Widget _stickyDate(DateTime date) {
+    return Positioned(
+      top: 128,
+      left: AppSpace.screenGutter,
+      child: IgnorePointer(
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            var page = _index.toDouble();
+            if (_controller.hasClients && _controller.position.haveDimensions) {
+              page = _controller.page ?? page;
+            }
+            return Opacity(opacity: page.clamp(0.0, 1.0), child: child);
+          },
+          child: AnimatedSwitcher(
+            duration: AppMotion.pop,
+            switchInCurve: AppMotion.curvePop,
+            transitionBuilder: (child, anim) => FadeTransition(
+              opacity: anim,
+              child: SlideTransition(
+                position: Tween(begin: const Offset(0, 0.22), end: Offset.zero)
+                    .animate(anim),
+                child: child,
+              ),
+            ),
+            child: DateDisplay(key: ValueKey(date), date: date),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final app = ref.watch(appStateProvider);
     final le = app.asData?.value.lifetimeLe ?? 0;
     final isToday = ref.watch(isTodayProvider);
+    final date = ref.watch(selectedDateProvider);
+    // Honour the Appearance setting — when off, drop the backdrop entirely.
+    final liquidOn =
+        ref.watch(settingsProvider).asData?.value.liquidFillEnabled ?? true;
 
     return Scaffold(
       body: Stack(
@@ -128,9 +176,10 @@ class _AppShellState extends ConsumerState<AppShell> {
           // Persistent, independent backdrop: always the bottom layer, never
           // inside the PageView, so horizontal swipes never move it. Sections
           // with their own opaque world (Biome) simply paint over it.
-          Positioned.fill(
-            child: _LiquidBackground(fraction: leIntoLevel(le) / 50),
-          ),
+          if (liquidOn)
+            Positioned.fill(
+              child: _LiquidBackground(fraction: leIntoLevel(le) / 50),
+            ),
           // Reserve the bottom band so page content never sits under the dots.
           Padding(
             padding:
@@ -180,6 +229,10 @@ class _AppShellState extends ConsumerState<AppShell> {
               ),
             ),
           ),
+          // Sticky date: lives in the shell (not the PageView), so it stays put
+          // during horizontal swipes instead of tilting with the page deck. It
+          // fades out as you swipe toward Biome (index 0), which has no date.
+          _stickyDate(date),
           // Directional edge peeks replace the page dots: the adjacent pages'
           // icons hug the bottom corners (tap to glide there).
           if (_index > 0)
@@ -220,7 +273,7 @@ class _NavTarget {
 }
 
 const _navTargets = [
-  _NavTarget(Icons.park_outlined, Color(0xFF7AC974)),
+  _NavTarget(Icons.park_outlined, AppColors.biomeGreen),
   _NavTarget(Icons.flag_outlined, AppColors.popPurple),
   _NavTarget(Icons.check_box_outlined, AppColors.popPink),
   _NavTarget(Icons.menu_book_outlined, AppColors.popTeal),

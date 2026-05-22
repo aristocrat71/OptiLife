@@ -1,15 +1,18 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/limits.dart';
 import '../data/database.dart';
+import '../widgets/char_counter.dart';
 import '../state/app_providers.dart';
 import '../theme/theme.dart';
+import '../widgets/confirm_dialog.dart';
 import '../widgets/day_pager.dart';
 import '../widgets/pop_calendar.dart';
 import '../widgets/pop_tappable.dart';
-import '../widgets/shell_controls.dart';
 import '../widgets/warp_button.dart';
 
 /// Calm life-admin (`03-tasks.md`): tasks scoped to the selected date, **no LE,
@@ -21,7 +24,6 @@ class TasksPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isPast = ref.watch(isPastProvider);
-    final date = ref.watch(selectedDateProvider);
     final tasksAsync = ref.watch(tasksForSelectedDateProvider);
 
     return Stack(
@@ -29,13 +31,11 @@ class TasksPage extends ConsumerWidget {
         DayPager(
           padding: const EdgeInsets.fromLTRB(
             AppSpace.screenGutter,
-            128,
+            184,
             AppSpace.screenGutter,
             24,
           ),
           children: [
-            DateDisplay(date: date),
-            const SizedBox(height: 16),
             _header(tasksAsync.asData?.value),
             const SizedBox(height: 16),
             Expanded(
@@ -237,7 +237,11 @@ class _TaskRow extends ConsumerWidget {
             ),
             const SizedBox(width: 2),
             GestureDetector(
-              onTap: () => ref.read(databaseProvider).deleteTask(task.id),
+              onTap: () async {
+                final ok = await showConfirmDelete(context,
+                    message: 'Remove “${task.title}”?');
+                if (ok) ref.read(databaseProvider).deleteTask(task.id);
+              },
               behavior: HitTestBehavior.opaque,
               child: const Padding(
                 padding: EdgeInsets.all(4),
@@ -448,7 +452,16 @@ class _TaskSheetState extends State<_TaskSheet> {
       setState(() => _titleError = true);
       return;
     }
+    if (title.characters.length > TextLimits.taskTitle) {
+      setState(() => _titleError = true);
+      _tooLong('Title', TextLimits.taskTitle);
+      return;
+    }
     final notes = _notes.text.trim().isEmpty ? null : _notes.text.trim();
+    if (notes != null && notes.characters.length > TextLimits.taskNotes) {
+      _tooLong('Notes', TextLimits.taskNotes);
+      return;
+    }
     if (widget.existing == null) {
       await widget.db.addTask(title, notes, _due);
     } else {
@@ -457,10 +470,11 @@ class _TaskSheetState extends State<_TaskSheet> {
     if (mounted) Navigator.of(context).pop();
   }
 
-  Future<void> _delete() async {
-    await widget.db.deleteTask(widget.existing!.id);
-    if (mounted) Navigator.of(context).pop();
-  }
+  void _tooLong(String field, int max) =>
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+            content: Text('$field must be $max characters or fewer.')));
 
   @override
   Widget build(BuildContext context) {
@@ -486,28 +500,16 @@ class _TaskSheetState extends State<_TaskSheet> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        editing ? 'EDIT TASK' : 'NEW TASK',
-                        style: AppType.label.copyWith(fontSize: 16),
-                      ),
-                      if (editing)
-                        PopTappable(
-                          onTap: _delete,
-                          child: const Icon(
-                            Icons.delete_outline_rounded,
-                            size: 24,
-                            color: AppColors.negative,
-                          ),
-                        ),
-                    ],
+                  Text(
+                    editing ? 'EDIT TASK' : 'NEW TASK',
+                    style: AppType.label.copyWith(fontSize: 16),
                   ),
                   const SizedBox(height: 14),
-                  _field(_title, 'Title…', error: _titleError),
+                  _field(_title, 'Title…',
+                      error: _titleError, maxLength: TextLimits.taskTitle),
                   const SizedBox(height: 10),
-                  _field(_notes, 'Notes (optional)…', maxLines: 2),
+                  _field(_notes, 'Notes (optional)…',
+                      maxLines: 2, maxLength: TextLimits.taskNotes),
                   const SizedBox(height: 16),
                   Row(
                     children: [
@@ -591,8 +593,9 @@ class _TaskSheetState extends State<_TaskSheet> {
     String hint, {
     bool error = false,
     int maxLines = 1,
+    int? maxLength,
   }) {
-    return Container(
+    final box = Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       decoration: BoxDecoration(
         color: AppColors.cream,
@@ -605,6 +608,9 @@ class _TaskSheetState extends State<_TaskSheet> {
       child: TextField(
         controller: controller,
         maxLines: maxLines,
+        inputFormatters: maxLength == null
+            ? null
+            : [LengthLimitingTextInputFormatter(maxLength)],
         style: AppType.body,
         cursorColor: AppColors.popPurple,
         onChanged: error ? (_) => setState(() => _titleError = false) : null,
@@ -615,6 +621,20 @@ class _TaskSheetState extends State<_TaskSheet> {
           hintStyle: AppType.body.copyWith(color: AppColors.textMuted),
         ),
       ),
+    );
+    if (maxLength == null) return box;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        box,
+        Padding(
+          padding: const EdgeInsets.only(top: 3, right: 4),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: CharCounter(controller: controller, max: maxLength),
+          ),
+        ),
+      ],
     );
   }
 }

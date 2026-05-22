@@ -341,6 +341,28 @@ class DateDisplay extends StatelessWidget {
   }
 }
 
+/// Round back coin for pushed screens (Settings, Workshop). Matches the shell
+/// control diameter + POP surface.
+class BackCoin extends StatelessWidget {
+  const BackCoin({super.key, required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopTappable(
+      onTap: onTap,
+      child: Container(
+        width: AppSpace.shellControl,
+        height: AppSpace.shellControl,
+        alignment: Alignment.center,
+        decoration: popSurface(fill: AppColors.paper, radius: AppRadii.pill),
+        child:
+            const Icon(Icons.arrow_back_rounded, size: 22, color: AppColors.ink),
+      ),
+    );
+  }
+}
+
 /// Bottom page indicator; active dot stretches to a pill (with a tree on Biome).
 class PageDots extends StatelessWidget {
   const PageDots({super.key, required this.count, required this.activeIndex});
