@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../state/app_providers.dart'; // re-exports dateOnly + le_math helpers
 import '../theme/theme.dart';
+import '../widgets/pop_calendar.dart';
 import '../widgets/pop_tappable.dart';
 import '../widgets/radial_menu.dart';
 import '../widgets/shell_controls.dart';
@@ -39,21 +40,42 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   Future<void> _pickDate() async {
     final now = DateTime.now();
-    // Calendar grid that commits the moment a day is tapped — no OK/Cancel.
-    final picked = await showDialog<DateTime>(
+    // Standard Material calendar (it sizes itself, so no clipping), committing
+    // the moment a day is tapped — no OK/Cancel. Kept the pop entrance.
+    final picked = await showGeneralDialog<DateTime>(
       context: context,
-      builder: (ctx) => Dialog(
-        child: SizedBox(
-          width: 340,
-          height: 380,
-          child: CalendarDatePicker(
-            initialDate: ref.read(selectedDateProvider),
-            firstDate: DateTime(now.year - 1),
-            lastDate: DateTime(now.year + 1),
-            onDateChanged: (d) => Navigator.of(ctx).pop(d),
+      barrierDismissible: true,
+      barrierLabel: 'Pick a date',
+      barrierColor: AppColors.ink.withValues(alpha: AppZ.scrim),
+      transitionDuration: AppMotion.pop,
+      pageBuilder: (ctx, _, _) => Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: math.min(
+                MediaQuery.of(ctx).size.width - 2 * AppSpace.screenGutter, 360),
+            padding: const EdgeInsets.fromLTRB(14, 16, 14, 18),
+            decoration: popSurface(
+                fill: AppColors.paper, radius: AppRadii.lg, stroke: 3),
+            child: PopCalendar(
+              selectedDate: ref.read(selectedDateProvider),
+              firstDate: DateTime(now.year - 1),
+              lastDate: DateTime(now.year + 1),
+              onSelect: (d) => Navigator.of(ctx).pop(d),
+            ),
           ),
         ),
       ),
+      transitionBuilder: (_, anim, _, child) {
+        final curved = CurvedAnimation(parent: anim, curve: AppMotion.curvePop);
+        return FadeTransition(
+          opacity: anim,
+          child: ScaleTransition(
+            scale: Tween(begin: 0.7, end: 1.0).animate(curved),
+            child: child,
+          ),
+        );
+      },
     );
     if (picked != null) {
       ref.read(selectedDateProvider.notifier).state = dateOnly(picked);
@@ -74,15 +96,7 @@ class _AppShellState extends ConsumerState<AppShell> {
         children: [
           if (_index != 0)
             Positioned.fill(
-              child: IgnorePointer(
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween(end: leIntoLevel(le) / 50),
-                  duration: AppMotion.fill,
-                  curve: AppMotion.curveFill,
-                  builder: (_, v, _) =>
-                      CustomPaint(painter: _LiquidPainter(v)),
-                ),
-              ),
+              child: _LiquidBackground(fraction: leIntoLevel(le) / 50),
             ),
           // Reserve the bottom band so page content never sits under the dots.
           Padding(
@@ -183,22 +197,79 @@ class _GoToPresentPill extends StatelessWidget {
   }
 }
 
-/// Lightweight static liquid-fill background (two phase-shifted sine waves).
-/// Height ∝ LE within the current level. Animation comes later (`08-motion.md`).
-class _LiquidPainter extends CustomPainter {
-  _LiquidPainter(this.fraction);
+/// Liquid-fill background: two phase-shifted sine waves that drift slowly so
+/// the surface reads as gently moving fluid. Height ∝ LE within the current
+/// level (`08-motion.md`). Cheap — one full-screen `CustomPaint` drawing two
+/// ~50-segment paths per frame, isolated behind a `RepaintBoundary`.
+class _LiquidBackground extends StatefulWidget {
+  const _LiquidBackground({required this.fraction});
   final double fraction;
 
   @override
+  State<_LiquidBackground> createState() => _LiquidBackgroundState();
+}
+
+class _LiquidBackgroundState extends State<_LiquidBackground>
+    with SingleTickerProviderStateMixin {
+  // One slow loop = one full horizontal drift of the waves.
+  late final AnimationController _phase =
+      AnimationController(vsync: this, duration: const Duration(seconds: 7))
+        ..repeat();
+
+  @override
+  void dispose() {
+    _phase.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: RepaintBoundary(
+        // Fill height eases smoothly toward the target LE fraction.
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(end: widget.fraction),
+          duration: AppMotion.fill,
+          curve: AppMotion.curveFill,
+          builder: (_, frac, _) => AnimatedBuilder(
+            animation: _phase,
+            builder: (_, _) => CustomPaint(
+              size: Size.infinite,
+              painter: _LiquidPainter(fraction: frac, t: _phase.value),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LiquidPainter extends CustomPainter {
+  _LiquidPainter({required this.fraction, required this.t});
+  final double fraction;
+  final double t; // 0..1 loop phase
+
+  @override
   void paint(Canvas canvas, Size size) {
-    final fillTop = size.height * (1 - (0.12 + 0.33 * fraction.clamp(0, 1)));
+    final tau = 2 * math.pi;
+    // A slow vertical bob on top of the LE-driven fill height.
+    final bob = math.sin(t * tau) * 4;
+    final fillTop = size.height * (1 - (0.12 + 0.33 * fraction.clamp(0, 1))) + bob;
     final paint = Paint()
       ..color = AppColors.popPurple.withValues(alpha: 0.16);
-    for (final cfg in [(amp: 10.0, phase: 0.0), (amp: 7.0, phase: math.pi)]) {
+    // Two waves drifting at different speeds/directions for an organic surface.
+    // Speeds are whole numbers of cycles per loop so the waveform at t=1 is
+    // identical to t=0 — the repeat is seamless (no visible reset).
+    for (final cfg in const [
+      (amp: 10.0, phase: 0.0, speed: 1.0),
+      (amp: 7.0, phase: math.pi, speed: -2.0),
+    ]) {
       final path = Path()..moveTo(0, fillTop);
       for (double x = 0; x <= size.width; x += 8) {
-        path.lineTo(
-            x, fillTop + math.sin(x / size.width * 2 * math.pi + cfg.phase) * cfg.amp);
+        final y = fillTop +
+            math.sin(x / size.width * tau + cfg.phase + t * tau * cfg.speed) *
+                cfg.amp;
+        path.lineTo(x, y);
       }
       path
         ..lineTo(size.width, size.height)
@@ -209,5 +280,6 @@ class _LiquidPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_LiquidPainter old) => old.fraction != fraction;
+  bool shouldRepaint(_LiquidPainter old) =>
+      old.fraction != fraction || old.t != t;
 }
