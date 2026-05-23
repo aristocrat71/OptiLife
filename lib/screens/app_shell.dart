@@ -186,6 +186,9 @@ class _AppShellState extends ConsumerState<AppShell> {
     }
 
     return Scaffold(
+      // Keyboard floats over the UI instead of squeezing the layout (the shell
+      // + liquid fill shouldn't reflow when an editor field is focused).
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           // Persistent, independent backdrop: always the bottom layer, never

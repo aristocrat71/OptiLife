@@ -36,6 +36,9 @@ class BiomeGame extends FlameGame {
   bool _ready = false;
   bool _showGrid = true;
   bool _seeded = false;
+  double _baseZoom = 1; // the fit-to-screen zoom set on load
+  Vector2? _pinchAnchor; // world point held under the moving pinch midpoint
+  double _pinchZoom0 = 1; // camera zoom when the pinch began
   QuestCategory? _placingCategory;
   List<TreeRow> _desired = const [];
 
@@ -100,9 +103,10 @@ class BiomeGame extends FlameGame {
 
     // Frame the whole diamond with a little breathing room, then centre on it.
     final worldW = (cols + rows) * tileW / 2;
+    _baseZoom = (size.x / (worldW + tileW)).clamp(0.45, 1.3);
     camera.viewfinder
       ..position = _gridCentre
-      ..zoom = (size.x / (worldW + tileW)).clamp(0.45, 1.3);
+      ..zoom = _baseZoom;
 
     _ready = true;
     _applyTrees(_desired);
@@ -200,15 +204,61 @@ class BiomeGame extends FlameGame {
     ));
   }
 
+  /// Begin a pinch: remember the camera zoom and the world point under the
+  /// pinch midpoint [focal] (game-widget coordinates).
+  void pinchBegin(Offset focal) {
+    if (!_ready) return;
+    _pinchZoom0 = camera.viewfinder.zoom;
+    _pinchAnchor = camera.globalToLocal(Vector2(focal.dx, focal.dy));
+  }
+
+  /// Update a pinch (`02-biome.md §2`): [scale] is the finger-distance ratio
+  /// since [pinchBegin]; [focal] is the current midpoint. Zoom is clamped, then
+  /// the camera is shifted so the anchored world point sits back under the
+  /// midpoint — giving simultaneous pan + zoom toward the fingers.
+  void pinchUpdate(double scale, Offset focal) {
+    final anchor = _pinchAnchor;
+    if (!_ready || anchor == null) return;
+    camera.viewfinder.zoom =
+        (_pinchZoom0 * scale).clamp(_baseZoom * 0.75, _baseZoom * 3.0);
+    final now = camera.globalToLocal(Vector2(focal.dx, focal.dy));
+    final p = camera.viewfinder.position;
+    camera.viewfinder.position =
+        Vector2(p.x + anchor.x - now.x, p.y + anchor.y - now.y);
+    _clampCamera();
+  }
+
+  void pinchEnd() => _pinchAnchor = null;
+
+  /// Reset the camera to the fit-to-screen zoom, centred on the grid.
+  void resetView() {
+    if (!_ready) return;
+    _pinchAnchor = null;
+    camera.viewfinder
+      ..zoom = _baseZoom
+      ..position = _gridCentre;
+  }
+
   /// Vertical drag → pan the camera within bounds (horizontal swipes are left
   /// to the PageView). `dy` is the screen-space drag delta.
   void panVertical(double dy) {
+    if (!_ready) return;
     final vf = camera.viewfinder;
-    final worldDy = dy / vf.zoom;
-    final centreY = _gridCentre.y;
-    final span = (cols + rows) * tileH / 4 + 80;
-    final nextY = (vf.position.y - worldDy).clamp(centreY - span, centreY + span);
-    vf.position = Vector2(vf.position.x, nextY);
+    vf.position = Vector2(vf.position.x, vf.position.y - dy / vf.zoom);
+    _clampCamera();
+  }
+
+  /// Keep the camera within a generous box around the grid so it can't drift
+  /// off into empty space (used by pan + zoom).
+  void _clampCamera() {
+    final vf = camera.viewfinder;
+    final c = _gridCentre;
+    final spanX = (cols + rows) * tileW / 4 + 80;
+    final spanY = (cols + rows) * tileH / 4 + 80;
+    vf.position = Vector2(
+      vf.position.x.clamp(c.x - spanX, c.x + spanX),
+      vf.position.y.clamp(c.y - spanY, c.y + spanY),
+    );
   }
 }
 
