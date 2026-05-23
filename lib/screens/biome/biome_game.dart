@@ -5,6 +5,7 @@ import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
+import 'package:flame/particles.dart';
 import 'package:flame_svg/flame_svg.dart';
 import 'package:flutter/animation.dart';
 
@@ -62,6 +63,16 @@ class BiomeGame extends FlameGame {
       col >= 0 && col < cols && row >= 0 && row < rows;
 
   static int cellKey(int col, int row) => col * rows + row;
+
+  /// Foot-anchored sprite size for a cell: native 62×84 aspect, scaled to the
+  /// tile footprint and shrunk toward the back for depth. Shared by the planted
+  /// tree and the placement ghost.
+  static Vector2 treeSize(int col, int row) {
+    const baseW = tileW * 0.95;
+    final depth = (col + row) / (cols + rows - 2);
+    final s = lerpDouble(0.82, 1.06, depth)!;
+    return Vector2(baseW, baseW * 84 / 62) * s;
+  }
 
   /// Cells currently holding a tree (encoded via [cellKey]).
   Set<int> occupiedKeys() =>
@@ -150,8 +161,43 @@ class BiomeGame extends FlameGame {
       );
       _trees[row.id] = comp;
       world.add(comp);
+      // Freshly planted (not initial seed) → kick a little dust at the foot.
+      if (_seeded) _plantDust(col, r);
     }
     _seeded = true;
+  }
+
+  /// A small brown dust puff bursting outward along the ground when a tree
+  /// drops in (`02-biome.md §5.2`, motion §2.5).
+  void _plantDust(int col, int row) {
+    final rnd = math.Random();
+    world.add(ParticleSystemComponent(
+      position: cellCentre(col, row),
+      priority: (col + row) * 16 + col + 1,
+      particle: Particle.generate(
+        count: 12,
+        generator: (i) {
+          final angle = rnd.nextDouble() * 2 * math.pi;
+          final speed = 16 + rnd.nextDouble() * 26;
+          return AcceleratedParticle(
+            // Longer-lived + gentler gravity so the puff is actually visible.
+            lifespan: 0.9 + rnd.nextDouble() * 0.5,
+            acceleration: Vector2(0, 55),
+            speed: Vector2(math.cos(angle) * speed, math.sin(angle) * speed * 0.4 - 14),
+            child: ComputedParticle(
+              renderer: (canvas, particle) {
+                // Hold opacity, then ease out over the back half of the life.
+                final fade = (1 - particle.progress * particle.progress)
+                    .clamp(0.0, 1.0);
+                final paint = Paint()
+                  ..color = const Color(0xFFB89B72).withValues(alpha: fade * 0.75);
+                canvas.drawCircle(Offset.zero, 7 * (1 - particle.progress) + 2, paint);
+              },
+            ),
+          );
+        },
+      ),
+    ));
   }
 
   /// Vertical drag → pan the camera within bounds (horizontal swipes are left
@@ -183,12 +229,7 @@ class TreeComponent extends PositionComponent {
           // term breaks ties along a diagonal deterministically.
           priority: (col + row) * 16 + col,
         ) {
-    // Native sprite is 62×84; keep that aspect, scale to the tile footprint,
-    // and shrink toward the back for depth.
-    const baseW = BiomeGame.tileW * 0.95;
-    final depth = (col + row) / (BiomeGame.cols + BiomeGame.rows - 2);
-    final s = lerpDouble(0.82, 1.06, depth)!;
-    size = Vector2(baseW, baseW * 84 / 62) * s;
+    size = BiomeGame.treeSize(col, row);
   }
 
   final Svg svg;
@@ -229,6 +270,10 @@ class _PlacementLayer extends PositionComponent with TapCallbacks {
   final BiomeGame game;
   double _phase = 0;
 
+  // The cell currently under the finger (shows a ghost tree until release).
+  int? _ghostCol;
+  int? _ghostRow;
+
   bool get _active => game._placingCategory != null;
 
   // Capture every tap while placing (and none otherwise), regardless of size.
@@ -238,14 +283,34 @@ class _PlacementLayer extends PositionComponent with TapCallbacks {
   @override
   void update(double dt) => _phase = (_phase + dt) % 1.0;
 
+  /// Resolve a tap point to a plantable cell, or null if out of range/occupied.
+  (int, int)? _cellFor(Vector2 point) {
+    final (col, row) = BiomeGame.cellAt(point);
+    if (!BiomeGame.inRange(col, row)) return null;
+    if (game.occupiedKeys().contains(BiomeGame.cellKey(col, row))) return null;
+    return (col, row);
+  }
+
   @override
   void onTapDown(TapDownEvent event) {
     if (!_active) return;
-    final (col, row) = BiomeGame.cellAt(event.localPosition);
-    if (!BiomeGame.inRange(col, row)) return;
-    if (game.occupiedKeys().contains(BiomeGame.cellKey(col, row))) return;
-    game.onCellTapped?.call(col, row);
+    final cell = _cellFor(event.localPosition);
+    if (cell == null) return;
+    _ghostCol = cell.$1;
+    _ghostRow = cell.$2;
   }
+
+  @override
+  void onTapUp(TapUpEvent event) {
+    final col = _ghostCol, row = _ghostRow;
+    _ghostCol = _ghostRow = null;
+    if (_active && col != null && row != null) {
+      game.onCellTapped?.call(col, row);
+    }
+  }
+
+  @override
+  void onTapCancel(TapCancelEvent event) => _ghostCol = _ghostRow = null;
 
   @override
   void render(Canvas canvas) {
@@ -287,6 +352,20 @@ class _PlacementLayer extends PositionComponent with TapCallbacks {
         canvas
           ..drawPath(path, fill)
           ..drawPath(path, edge);
+      }
+    }
+
+    // Ghost tree on the cell under the finger (foot-anchored, translucent).
+    final gc = _ghostCol, gr = _ghostRow;
+    if (gc != null && gr != null) {
+      final svg = game._sprites[game._placingCategory!];
+      if (svg != null) {
+        final size = BiomeGame.treeSize(gc, gr);
+        final c = BiomeGame.cellCentre(gc, gr);
+        canvas.saveLayer(null, Paint()..color = const Color(0x80000000));
+        canvas.translate(c.x - size.x / 2, c.y - size.y);
+        svg.render(canvas, size);
+        canvas.restore();
       }
     }
   }

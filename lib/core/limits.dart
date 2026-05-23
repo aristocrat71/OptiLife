@@ -15,6 +15,7 @@ abstract final class TextLimits {
 /// Trees a single biome holds before the reboot prompt fires (Data Models §7.6,
 /// `02-biome.md §6`).
 ///
-/// TEMP (testing only): set to 1 so the reboot + dimensional-travel warp can be
-/// exercised after a single tree. **Bump back to 100 before release.**
-const int kBiomeCapacity = 1;
+/// TEMP (testing only): set low so the reboot can be exercised without 100
+/// trees. 10 leaves room to test placement (ghost/dust) before the world fills.
+/// **Bump back to 100 before release.**
+const int kBiomeCapacity = 10;
