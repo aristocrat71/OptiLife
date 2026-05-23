@@ -1,8 +1,11 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gal/gal.dart';
 
 import '../../core/limits.dart';
 import '../../state/app_providers.dart';
@@ -24,6 +27,10 @@ class BiomePage extends ConsumerStatefulWidget {
 
 class _BiomePageState extends ConsumerState<BiomePage> {
   final BiomeGame _game = BiomeGame();
+
+  // Wraps just the biome world for Photo mode — the HUD/buttons are siblings
+  // outside this boundary, so a capture is clean chrome-free by construction.
+  final GlobalKey _captureKey = GlobalKey();
 
   // Guards the reboot prompt so a full world asks once per visit, not per build.
   bool _rebootPrompted = false;
@@ -109,6 +116,37 @@ class _BiomePageState extends ConsumerState<BiomePage> {
     _rebooting = false;
   }
 
+  /// Photo mode — Tier 1 (`02-biome.md §4`): grab a clean shot of the biome
+  /// world and save it to the device gallery. One tap, no crop/filters.
+  Future<void> _capturePhoto() async {
+    try {
+      final boundary = _captureKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
+      if (boundary == null) return;
+      final image = await boundary.toImage(
+          pixelRatio: MediaQuery.of(context).devicePixelRatio);
+      final data = await image.toByteData(format: ui.ImageByteFormat.png);
+      image.dispose();
+      if (data == null) return;
+      await Gal.putImageBytes(
+        data.buffer.asUint8List(),
+        name: 'optilife_biome_${DateTime.now().millisecondsSinceEpoch}',
+      );
+      _toast('Saved to gallery 📸');
+    } on GalException catch (_) {
+      _toast("Couldn't save — gallery access denied");
+    } catch (_) {
+      _toast("Couldn't save photo");
+    }
+  }
+
+  void _toast(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(msg)));
+  }
+
   @override
   Widget build(BuildContext context) {
     // Keep the rendered world reconciled with the DB.
@@ -151,19 +189,22 @@ class _BiomePageState extends ConsumerState<BiomePage> {
         // the PageView so swiping still changes screens. A passive Listener adds
         // 2-finger pinch-zoom on top without touching the gesture arena.
         Positioned.fill(
-          child: Listener(
-            onPointerDown: _onPointerDown,
-            onPointerMove: _onPointerMove,
-            onPointerUp: _onPointerUp,
-            onPointerCancel: _onPointerUp,
-            child: GestureDetector(
-              // Opaque so vertical drags reliably hit this detector over the
-              // Flame surface (it was intermittently missing them).
-              behavior: HitTestBehavior.opaque,
-              onVerticalDragUpdate: (d) {
-                if (_pointers.length < 2) _game.panVertical(d.delta.dy);
-              },
-              child: GameWidget(game: _game),
+          child: RepaintBoundary(
+            key: _captureKey,
+            child: Listener(
+              onPointerDown: _onPointerDown,
+              onPointerMove: _onPointerMove,
+              onPointerUp: _onPointerUp,
+              onPointerCancel: _onPointerUp,
+              child: GestureDetector(
+                // Opaque so vertical drags reliably hit this detector over the
+                // Flame surface.
+                behavior: HitTestBehavior.opaque,
+                onVerticalDragUpdate: (d) {
+                  if (_pointers.length < 2) _game.panVertical(d.delta.dy);
+                },
+                child: GameWidget(game: _game),
+              ),
             ),
           ),
         ),
@@ -186,7 +227,7 @@ class _BiomePageState extends ConsumerState<BiomePage> {
           Positioned(
             top: chromeTop,
             right: AppSpace.screenGutter,
-            child: const _PhotoStubButton(),
+            child: _PhotoButton(onTap: _capturePhoto),
           ),
           // Reset zoom/pan back to the framed view. Hidden at Level 1 (no world
           // to frame yet).
@@ -343,17 +384,16 @@ class _CapacityRingPainter extends CustomPainter {
   bool shouldRepaint(_CapacityRingPainter old) => old.fraction != fraction;
 }
 
-/// Photo mode (Tier 1) is deferred to a follow-up — this is the parked button
-/// (`02-biome.md §4`). Tapping it explains that for now.
-class _PhotoStubButton extends StatelessWidget {
-  const _PhotoStubButton();
+/// Photo mode button (Tier 1, `02-biome.md §4`): one tap saves a clean shot of
+/// the biome to the gallery.
+class _PhotoButton extends StatelessWidget {
+  const _PhotoButton({required this.onTap});
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return PopTappable(
-      onTap: () => ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(content: Text('📸 Photo mode coming soon'))),
+      onTap: onTap,
       child: Container(
         width: AppSpace.shellControl,
         height: AppSpace.shellControl,
