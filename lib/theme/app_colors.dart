@@ -21,6 +21,10 @@ abstract final class AppColors {
   /// Biome's leafy light green (the Bio nav/petal colour).
   static const biomeGreen = Color(0xFF7AC974);
 
+  /// Pale backdrop of the Biome world (the Flame canvas + the shell band behind
+  /// it, so the liquid fill never peeks through on Biome).
+  static const biomeSky = Color(0xFFE3F1D6);
+
   // ── semantic ──
   static const background = cream;
   static const surface = paper;
