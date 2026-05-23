@@ -348,7 +348,8 @@ class _HabitChip extends ConsumerWidget {
 
   Future<void> _toggle(BuildContext context, WidgetRef ref) async {
     final outcome = await ref.read(gameRepositoryProvider).toggleHabit(habit.id);
-    if (outcome == ActionOutcome.leveledUpAwaitingPlacement && context.mounted) {
+    if (!context.mounted) return;
+    if (outcome == ActionOutcome.leveledUpAwaitingPlacement) {
       final app = await ref.read(databaseProvider).watchAppState().first;
       if (!context.mounted) return;
       await showLevelUp(
@@ -356,6 +357,16 @@ class _HabitChip extends ConsumerWidget {
         level: currentLevel(app.lifetimeLe),
         category: app.pendingTreeCategory ?? QuestCategory.normal,
       );
+    } else if (outcome == ActionOutcome.leveledDown) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+            const SnackBar(content: Text('🍂 Level down — newest tree removed.')));
+    } else if (outcome == ActionOutcome.blockedNoEnergy) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+            const SnackBar(content: Text('Life energy already at 0.')));
     }
   }
 

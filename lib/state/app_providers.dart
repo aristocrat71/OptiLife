@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/legacy.dart'; // StateProvider (Riverpod 3)
 
 import '../core/date_utils.dart';
 import '../core/enums.dart';
+import '../core/limits.dart';
 import '../data/database.dart';
 import '../data/game_repository.dart';
 
@@ -80,6 +81,18 @@ final rolledQuestsForSelectedDateProvider =
 /// The current biome's trees (date-agnostic).
 final treesProvider = StreamProvider<List<TreeRow>>(
     (ref) => ref.watch(databaseProvider).watchTrees());
+
+/// True when the biome has hit its tree cap and awaits a reboot.
+final isBiomeFullProvider = Provider<bool>((ref) {
+  final trees = ref.watch(treesProvider).asData?.value;
+  return trees != null && trees.length >= kBiomeCapacity;
+});
+
+/// The biome hard lock (Design Doc §6.7, §4.3): set while a tree is awaiting
+/// placement OR the world is full and must be rebooted. The shell forces the
+/// user onto Biome and freezes everything else until it clears.
+final biomeLockedProvider = Provider<bool>((ref) =>
+    ref.watch(isPlacingTreeProvider) || ref.watch(isBiomeFullProvider));
 
 // ── Workshop quest browsing (filtering happens in SQL — see
 //    AppDatabase.watchWorkshopQuests) ──
