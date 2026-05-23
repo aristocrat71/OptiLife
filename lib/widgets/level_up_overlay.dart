@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -6,12 +7,12 @@ import 'package:flutter/services.dart';
 import '../theme/theme.dart';
 import 'pop_tappable.dart';
 
-/// Full-screen LEVEL UP celebration (`10-secondary-screens.md §9`). Shown when a
-/// mark/log crosses a 50-LE boundary. A category-coloured confetti burst rains
-/// over a hero card.
+/// Full-screen LEVEL UP celebration (`10-secondary-screens.md §9`, motion §2.5).
+/// Shown when a mark/log crosses a 50-LE boundary. A category-coloured confetti
+/// burst rains over a hero card.
 ///
-/// Tree **placement** lives on the Biome screen (still a stub), so for now the
-/// pop is tap-to-dismiss; the pending tree stays queued in `app_state`.
+/// On dismiss (tap or ~1.4s auto-advance), the pending tree set on `app_state`
+/// drives the shell into Biome placement mode (the hard lock in `app_shell`).
 Future<void> showLevelUp(
   BuildContext context, {
   required int level,
@@ -30,17 +31,6 @@ Future<void> showLevelUp(
         FadeTransition(opacity: anim, child: child),
   );
 }
-
-/// Friendly tree label for the celebration copy. `normal` (habit-driven level-up
-/// with no quests in window — Data Models §7.8) reads as a plain "new tree".
-String _treeLabel(QuestCategory c) => switch (c) {
-      QuestCategory.adventure => 'An Adventure tree',
-      QuestCategory.fitness => 'A Fitness tree',
-      QuestCategory.social => 'A Social tree',
-      QuestCategory.creative => 'A Creative tree',
-      QuestCategory.night => 'A Night tree',
-      QuestCategory.normal => 'A new tree',
-    };
 
 class _LevelUpOverlay extends StatefulWidget {
   const _LevelUpOverlay({required this.level, required this.category});
@@ -62,8 +52,22 @@ class _LevelUpOverlayState extends State<_LevelUpOverlay>
     duration: AppMotion.pop,
   )..forward();
 
+  // Auto-advance into placement after the celebration beat (motion §2.5).
+  Timer? _auto;
+
+  void _dismiss() {
+    if (mounted) Navigator.of(context).maybePop();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _auto = Timer(const Duration(milliseconds: 4000), _dismiss);
+  }
+
   @override
   void dispose() {
+    _auto?.cancel();
     _burst.dispose();
     _pop.dispose();
     super.dispose();
@@ -127,33 +131,19 @@ class _LevelUpOverlayState extends State<_LevelUpOverlay>
                 letterSpacing: 1.2,
               ),
             ),
+            const SizedBox(height: 12),
+            Text('LVL ${widget.level}',
+                style: AppType.numXL.copyWith(color: AppColors.cream)),
             const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppColors.cream,
-                borderRadius: AppRadii.r(AppRadii.md),
-                border: Border.all(color: AppColors.ink, width: 2.5),
-              ),
-              child: Text('LV ${widget.level}', style: AppType.numXL),
-            ),
-            const SizedBox(height: 18),
             Text(
-              '${_treeLabel(widget.category)} is ready 🌳',
+              'Your tree is ready to be planted!',
               textAlign: TextAlign.center,
               style: AppType.bodyL.copyWith(color: AppColors.cream),
             ),
-            const SizedBox(height: 6),
-            Text(
-              'Plant it in your biome',
-              style: AppType.caption.copyWith(
-                color: AppColors.cream.withValues(alpha: 0.85),
-              ),
-            ),
             const SizedBox(height: 18),
-            // Placement isn't built yet, so this dismisses for now.
+            // Dismiss → the shell drops into Biome placement mode.
             PopTappable(
-              onTap: () => Navigator.of(context).maybePop(),
+              onTap: _dismiss,
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 22, vertical: 11),
@@ -163,7 +153,8 @@ class _LevelUpOverlayState extends State<_LevelUpOverlay>
                   stroke: 2.5,
                   shadow: false,
                 ),
-                child: Text('Nice!', style: AppType.label.copyWith(fontSize: 15)),
+                child: Text('Plant it 🌳',
+                    style: AppType.label.copyWith(fontSize: 15)),
               ),
             ),
           ],

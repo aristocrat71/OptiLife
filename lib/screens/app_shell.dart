@@ -8,8 +8,8 @@ import '../theme/theme.dart';
 import '../widgets/pop_calendar.dart';
 import '../widgets/radial_menu.dart';
 import '../widgets/shell_controls.dart';
+import 'biome/biome_page.dart';
 import 'journal_page.dart';
-import 'placeholder_pages.dart';
 import 'settings_page.dart';
 import 'side_quest_page.dart';
 import 'tasks_page.dart';
@@ -170,6 +170,18 @@ class _AppShellState extends ConsumerState<AppShell> {
     final liquidOn =
         ref.watch(settingsProvider).asData?.value.liquidFillEnabled ?? true;
 
+    // §3.1 HARD placement lock: a pending tree forces the app to Biome and
+    // freezes everything else until the tree is planted. Crash-safe — this
+    // also fires on launch when app_state resolves with a pending category.
+    final placing = ref.watch(isPlacingTreeProvider);
+    ref.listen(isPlacingTreeProvider, (_, next) {
+      if (next && _index != 0) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _controller.hasClients) _goToPage(0);
+        });
+      }
+    });
+
     return Scaffold(
       body: Stack(
         children: [
@@ -186,6 +198,9 @@ class _AppShellState extends ConsumerState<AppShell> {
                 EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 40),
             child: PageView(
               controller: _controller,
+              // Frozen during placement so the user can't swipe off Biome.
+              physics:
+                  placing ? const NeverScrollableScrollPhysics() : null,
               onPageChanged: (i) => setState(() => _index = i),
               children: [
                 _depthPage(0, const BiomePage()),
@@ -205,7 +220,13 @@ class _AppShellState extends ConsumerState<AppShell> {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(AppSpace.screenGutter, 6,
                     AppSpace.screenGutter, 0),
-                child: Row(
+                // §3.1: shell controls dim + go inert while placing a tree.
+                child: IgnorePointer(
+                  ignoring: placing,
+                  child: AnimatedOpacity(
+                    opacity: placing ? 0.35 : 1,
+                    duration: AppMotion.pop,
+                    child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -225,6 +246,8 @@ class _AppShellState extends ConsumerState<AppShell> {
                       onLongPress: _pickDate,
                     ),
                   ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -235,7 +258,7 @@ class _AppShellState extends ConsumerState<AppShell> {
           _stickyDate(date),
           // Directional edge peeks replace the page dots: the adjacent pages'
           // icons hug the bottom corners (tap to glide there).
-          if (_index > 0)
+          if (_index > 0 && !placing)
             Positioned(
               bottom: AppSpace.pageDotsInset,
               left: AppSpace.screenGutter,
@@ -247,7 +270,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                 ),
               ),
             ),
-          if (_index < _navTargets.length - 1)
+          if (_index < _navTargets.length - 1 && !placing)
             Positioned(
               bottom: AppSpace.pageDotsInset,
               right: AppSpace.screenGutter,
@@ -392,7 +415,8 @@ class _LiquidPainter extends CustomPainter {
     final tau = 2 * math.pi;
     // A slow vertical bob on top of the LE-driven fill height.
     final bob = math.sin(t * tau) * 4;
-    final fillTop = size.height * (1 - (0.12 + 0.33 * fraction.clamp(0, 1))) + bob;
+    // Empty sits ~10% up; a near-full level fills ~90% of the screen.
+    final fillTop = size.height * (1 - (0.10 + 0.80 * fraction.clamp(0, 1))) + bob;
     final paint = Paint()
       ..color = AppColors.popPurple.withValues(alpha: 0.10);
     // Two waves drifting at different speeds/directions for an organic surface.

@@ -7,6 +7,7 @@ import '../data/game_repository.dart';
 import '../state/app_providers.dart';
 import '../theme/theme.dart';
 import '../widgets/day_pager.dart';
+import '../widgets/level_up_overlay.dart';
 import '../widgets/pop_tappable.dart';
 import '../widgets/quest_card.dart';
 import '../widgets/warp_button.dart';
@@ -38,8 +39,14 @@ class _SideQuestPageState extends ConsumerState<SideQuestPage> {
   Future<void> _onMark(String questId) async {
     final outcome =
         await ref.read(gameRepositoryProvider).markQuestComplete(questId);
-    if (outcome == ActionOutcome.leveledUpAwaitingPlacement) {
-      _snack('⭐ Level up! Head to the biome to plant your tree.');
+    if (outcome == ActionOutcome.leveledUpAwaitingPlacement && mounted) {
+      final app = await ref.read(databaseProvider).watchAppState().first;
+      if (!mounted) return;
+      await showLevelUp(
+        context,
+        level: currentLevel(app.lifetimeLe),
+        category: app.pendingTreeCategory ?? QuestCategory.normal,
+      );
     }
   }
 
