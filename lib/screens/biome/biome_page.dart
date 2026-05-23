@@ -29,6 +29,44 @@ class _BiomePageState extends ConsumerState<BiomePage> {
   bool _rebootPrompted = false;
   bool _rebooting = false;
 
+  // Pinch-zoom via a passive Listener (raw pointers) so it never competes with
+  // the PageView swipe / vertical-pan in the gesture arena. Tracks live pointer
+  // positions; a 2-finger gesture drives the camera zoom by distance ratio.
+  final Map<int, Offset> _pointers = {};
+  double? _pinchStartDist;
+
+  void _onPointerDown(PointerDownEvent e) {
+    // localPosition is relative to the game widget — the space Flame's camera
+    // maps from, so the focal point lands on the right world cell.
+    _pointers[e.pointer] = e.localPosition;
+    if (_pointers.length == 2) {
+      final pts = _pointers.values.toList();
+      _pinchStartDist = (pts[0] - pts[1]).distance;
+      _game.pinchBegin(Offset.lerp(pts[0], pts[1], 0.5)!);
+    }
+  }
+
+  void _onPointerMove(PointerMoveEvent e) {
+    if (!_pointers.containsKey(e.pointer)) return;
+    _pointers[e.pointer] = e.localPosition;
+    final start = _pinchStartDist;
+    if (_pointers.length >= 2 && start != null && start > 0) {
+      final pts = _pointers.values.toList();
+      final dist = (pts[0] - pts[1]).distance;
+      final focal = Offset.lerp(pts[0], pts[1], 0.5)!;
+      // scale = finger-distance ratio; focal drives the pan.
+      _game.pinchUpdate(dist / start, focal);
+    }
+  }
+
+  void _onPointerUp(PointerEvent e) {
+    _pointers.remove(e.pointer);
+    if (_pointers.length < 2) {
+      _pinchStartDist = null;
+      _game.pinchEnd();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -110,11 +148,23 @@ class _BiomePageState extends ConsumerState<BiomePage> {
     return Stack(
       children: [
         // A vertical-only drag pans the biome; horizontal drags fall through to
-        // the PageView so swiping still changes screens.
+        // the PageView so swiping still changes screens. A passive Listener adds
+        // 2-finger pinch-zoom on top without touching the gesture arena.
         Positioned.fill(
-          child: GestureDetector(
-            onVerticalDragUpdate: (d) => _game.panVertical(d.delta.dy),
-            child: GameWidget(game: _game),
+          child: Listener(
+            onPointerDown: _onPointerDown,
+            onPointerMove: _onPointerMove,
+            onPointerUp: _onPointerUp,
+            onPointerCancel: _onPointerUp,
+            child: GestureDetector(
+              // Opaque so vertical drags reliably hit this detector over the
+              // Flame surface (it was intermittently missing them).
+              behavior: HitTestBehavior.opaque,
+              onVerticalDragUpdate: (d) {
+                if (_pointers.length < 2) _game.panVertical(d.delta.dy);
+              },
+              child: GameWidget(game: _game),
+            ),
           ),
         ),
         if (isEmpty)
@@ -138,6 +188,14 @@ class _BiomePageState extends ConsumerState<BiomePage> {
             right: AppSpace.screenGutter,
             child: const _PhotoStubButton(),
           ),
+          // Reset zoom/pan back to the framed view. Hidden at Level 1 (no world
+          // to frame yet).
+          if (!isEmpty)
+            Positioned(
+              left: AppSpace.screenGutter,
+              bottom: MediaQuery.of(context).padding.bottom + 28,
+              child: _ResetViewButton(onTap: _game.resetView),
+            ),
           // Full world → the reboot lives at the bottom, the only way forward.
           if (treeCount >= kBiomeCapacity)
             Positioned(
@@ -302,6 +360,28 @@ class _PhotoStubButton extends StatelessWidget {
         alignment: Alignment.center,
         decoration: popSurface(fill: AppColors.paper, radius: AppRadii.pill),
         child: const Icon(Icons.photo_camera_outlined,
+            size: 22, color: AppColors.ink),
+      ),
+    );
+  }
+}
+
+/// Bottom-left button that snaps the camera back to the framed, fit-to-screen
+/// view after the user has pinched/panned around.
+class _ResetViewButton extends StatelessWidget {
+  const _ResetViewButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopTappable(
+      onTap: onTap,
+      child: Container(
+        width: AppSpace.shellControl,
+        height: AppSpace.shellControl,
+        alignment: Alignment.center,
+        decoration: popSurface(fill: AppColors.paper, radius: AppRadii.pill),
+        child: const Icon(Icons.center_focus_strong_rounded,
             size: 22, color: AppColors.ink),
       ),
     );
