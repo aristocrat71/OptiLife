@@ -195,6 +195,9 @@ class _AppShellState extends ConsumerState<AppShell> {
             Positioned.fill(
               child: _LiquidBackground(fraction: leIntoLevel(le) / 50),
             ),
+          // Biome's pale world extends over the reserved bottom band (and masks
+          // the liquid fill) on index 0, fading out as you swipe toward SQ.
+          Positioned.fill(child: _BiomeBackdrop(controller: _controller)),
           // Reserve the bottom band so page content never sits under the dots.
           Padding(
             padding:
@@ -356,6 +359,36 @@ class _EdgePeekState extends State<_EdgePeek>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: widget.pointLeft ? [chevron, icon] : [icon, chevron],
+      ),
+    );
+  }
+}
+
+/// A full-screen pale-green wash that's opaque on Biome (index 0) and fades out
+/// as you swipe toward Side Quests. It sits above the liquid fill and below the
+/// PageView, so the strip the PageView reserves for the edge-peeks reads as the
+/// Biome world instead of leaking the purple liquid.
+class _BiomeBackdrop extends StatelessWidget {
+  const _BiomeBackdrop({required this.controller});
+  final PageController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: AnimatedBuilder(
+        animation: controller,
+        builder: (_, _) {
+          var page = 0.0;
+          if (controller.hasClients && controller.position.haveDimensions) {
+            page = controller.page ?? 0;
+          }
+          final opacity = (1 - page).clamp(0.0, 1.0);
+          if (opacity == 0) return const SizedBox.shrink();
+          return Opacity(
+            opacity: opacity,
+            child: const ColoredBox(color: AppColors.biomeSky),
+          );
+        },
       ),
     );
   }

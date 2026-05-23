@@ -70,7 +70,7 @@ class BiomeGame extends FlameGame {
   // A pale backdrop so only the diamond grid reads green (a saturated
   // full-screen green felt too heavy).
   @override
-  Color backgroundColor() => const Color(0xFFE3F1D6);
+  Color backgroundColor() => AppColors.biomeSky;
 
   @override
   Future<void> onLoad() async {
