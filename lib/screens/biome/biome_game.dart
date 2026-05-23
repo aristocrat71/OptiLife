@@ -119,10 +119,17 @@ class BiomeGame extends FlameGame {
   void _applyTrees(List<TreeRow> trees) {
     final wanted = {for (final t in trees) t.id: t};
 
-    // Remove trees that no longer exist (level-down, reboot).
-    for (final id in _trees.keys.toList()) {
-      if (!wanted.containsKey(id)) {
-        _trees.remove(id)?.removeFromParent();
+    // Remove trees that no longer exist. A level-down uproots the newest tree
+    // with a reverse-pop; a reboot wipes everything, so skip the per-tree
+    // animation there (the dimensional-travel warp covers it).
+    final removed = _trees.keys.where((id) => !wanted.containsKey(id)).toList();
+    final wipe = wanted.isEmpty && removed.length > 1;
+    for (final id in removed) {
+      final comp = _trees.remove(id);
+      if (wipe) {
+        comp?.removeFromParent();
+      } else {
+        comp?.uproot();
       }
     }
 
@@ -199,6 +206,16 @@ class TreeComponent extends PositionComponent {
         EffectController(duration: 0.55, curve: Curves.elasticOut),
       ));
     }
+  }
+
+  /// Level-down: squash the tree back into the ground, then remove it
+  /// (`02-biome.md §5.4`).
+  void uproot() {
+    add(ScaleEffect.to(
+      Vector2(1.2, 0),
+      EffectController(duration: 0.28, curve: Curves.easeInBack),
+      onComplete: removeFromParent,
+    ));
   }
 
   @override

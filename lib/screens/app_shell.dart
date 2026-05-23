@@ -170,17 +170,20 @@ class _AppShellState extends ConsumerState<AppShell> {
     final liquidOn =
         ref.watch(settingsProvider).asData?.value.liquidFillEnabled ?? true;
 
-    // §3.1 HARD placement lock: a pending tree forces the app to Biome and
-    // freezes everything else until the tree is planted. Crash-safe — this
-    // also fires on launch when app_state resolves with a pending category.
-    final placing = ref.watch(isPlacingTreeProvider);
-    ref.listen(isPlacingTreeProvider, (_, next) {
-      if (next && _index != 0) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _controller.hasClients) _goToPage(0);
-        });
-      }
-    });
+    // §3.1 HARD biome lock: forces the app to Biome and freezes everything else
+    // while a tree awaits placement OR the world is full (must be rebooted).
+    // Crash-safe — also fires on launch when app_state resolves locked.
+    final placing = ref.watch(biomeLockedProvider);
+    // Force the user onto Biome whenever the lock is (or becomes) active. Done
+    // in build — not just via listen — so it also catches launch, when the lock
+    // resolves true on a rebuild rather than as a change the listener sees.
+    if (placing) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_controller.hasClients) return;
+        final page = (_controller.page ?? _index.toDouble()).round();
+        if (page != 0) _goToPage(0);
+      });
+    }
 
     return Scaffold(
       body: Stack(

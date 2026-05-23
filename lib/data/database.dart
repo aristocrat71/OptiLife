@@ -56,10 +56,10 @@ class AppDatabase extends _$AppDatabase {
   /// First-launch seeding (Data Models §9): singleton rows + preset quests.
   Future<void> _seed() async {
     await into(appState).insert(const AppStateCompanion(id: Value(1)));
-    // TEMP (testing only — revert to default): seed 6 quests/day so level-ups
-    // come faster while testing the biome. Default is 3.
+    // TEMP (testing only — revert to default): seed 10 quests/day to stress-test
+    // the biome (faster level-ups). Default is 3.
     await into(settings).insert(
-        const SettingsCompanion(id: Value(1), questsPerDay: Value(6)));
+        const SettingsCompanion(id: Value(1), questsPerDay: Value(10)));
     await batch((b) {
       b.insertAll(
         quests,

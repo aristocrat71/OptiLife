@@ -4,11 +4,12 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/game_repository.dart';
+import '../../core/limits.dart';
 import '../../state/app_providers.dart';
 import '../../theme/theme.dart';
 import '../../widgets/pop_tappable.dart';
 import 'biome_game.dart';
+import 'reboot_overlay.dart';
 
 /// The Biome screen (`02-biome.md`): a Flame isometric world hosted at PageView
 /// index 0. Date-agnostic — no `DayPager`. Renders the world + current trees,
@@ -24,6 +25,10 @@ class BiomePage extends ConsumerStatefulWidget {
 class _BiomePageState extends ConsumerState<BiomePage> {
   final BiomeGame _game = BiomeGame();
 
+  // Guards the reboot prompt so a full world asks once per visit, not per build.
+  bool _rebootPrompted = false;
+  bool _rebooting = false;
+
   @override
   void initState() {
     super.initState();
@@ -35,16 +40,35 @@ class _BiomePageState extends ConsumerState<BiomePage> {
   }
 
   /// User tapped a valid empty cell during placement → plant the pending tree.
-  Future<void> _onCellTapped(int col, int row) async {
-    final outcome = await ref
-        .read(gameRepositoryProvider)
-        .placeTree(col.toDouble(), row.toDouble());
-    // The 100th-tree reboot prompt is wired in Phase 4.
-    if (outcome == PlaceOutcome.placedBiomeFull && mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(content: Text('🌍 Your world is full!')));
-    }
+  /// The 100th-tree reboot prompt is driven from [build] off the tree count.
+  Future<void> _onCellTapped(int col, int row) =>
+      ref.read(gameRepositoryProvider).placeTree(col.toDouble(), row.toDouble());
+
+  /// World is full (100 trees): offer the reboot once per visit (`§6`).
+  Future<void> _maybePromptReboot() async {
+    if (_rebootPrompted || _rebooting) return;
+    _rebootPrompted = true;
+    final confirmed = await showRebootSheet(context);
+    if (confirmed && mounted) await _runReboot();
+  }
+
+  /// The HUD's Reboot button (shown on a full world): re-open the prompt.
+  Future<void> _rebootButtonPressed() async {
+    if (_rebooting) return;
+    final confirmed = await showRebootSheet(context);
+    if (confirmed && mounted) await _runReboot();
+  }
+
+  /// Confirmed reboot: warp the screen while the world is wiped behind it
+  /// (motion §2.7). The DB reset clears trees + resets LE → level 1.
+  Future<void> _runReboot() async {
+    _rebooting = true;
+    final travel = showDimensionalTravel(context);
+    // Let the swirl cover the screen before the world empties underneath.
+    await Future.delayed(const Duration(milliseconds: 500));
+    await ref.read(gameRepositoryProvider).rebootBiome();
+    await travel;
+    _rebooting = false;
   }
 
   @override
@@ -64,6 +88,16 @@ class _BiomePageState extends ConsumerState<BiomePage> {
     // At Level 1 there's nothing to plant — hide the grid, show just the prompt.
     _game.setGridVisible(!isEmpty);
     _game.setPlacement(placingCategory);
+
+    // Full world → surface the reboot prompt (once). Reset the guard when the
+    // count drops (after reboot / level-down) so it can re-arm next time.
+    if (treeCount >= kBiomeCapacity && !placing) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _maybePromptReboot();
+      });
+    } else if (treeCount < kBiomeCapacity) {
+      _rebootPrompted = false;
+    }
 
     final topInset = MediaQuery.of(context).padding.top;
     // Sit just below the shell's LE ring / calendar row (ring is 48 tall,
@@ -97,17 +131,21 @@ class _BiomePageState extends ConsumerState<BiomePage> {
           Positioned(
             top: chromeTop,
             left: AppSpace.screenGutter,
-            child: _WorldHud(
-              world: worldsCompleted + 1,
-              treeCount: treeCount,
-              worldsCompleted: worldsCompleted,
-            ),
+            child: _WorldHud(world: worldsCompleted + 1, treeCount: treeCount),
           ),
           Positioned(
             top: chromeTop,
             right: AppSpace.screenGutter,
             child: const _PhotoStubButton(),
           ),
+          // Full world → the reboot lives at the bottom, the only way forward.
+          if (treeCount >= kBiomeCapacity)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: MediaQuery.of(context).padding.bottom + 28,
+              child: Center(child: _RebootButton(onTap: _rebootButtonPressed)),
+            ),
         ],
       ],
     );
@@ -148,25 +186,20 @@ class _PlacementBanner extends StatelessWidget {
 /// Top-left progression cluster (`02-biome.md §3`): the long-term WORLD trophy,
 /// the n/100 capacity ring, and a worlds-completed subline.
 class _WorldHud extends StatelessWidget {
-  const _WorldHud({
-    required this.world,
-    required this.treeCount,
-    required this.worldsCompleted,
-  });
+  const _WorldHud({required this.world, required this.treeCount});
   final int world;
   final int treeCount;
-  final int worldsCompleted;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // WORLD N — the trophy chip.
+        // WORLD N — the world ticker. Flat (non-interactive, so no sticker pop).
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: popSurface(
-              fill: AppColors.popPurple, radius: AppRadii.pill, stroke: 2.5),
+              fill: AppColors.popPurple, radius: AppRadii.pill, shadow: false),
           child: Text(
             'WORLD $world',
             style: AppType.label
@@ -174,38 +207,54 @@ class _WorldHud extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        // Capacity ring + count.
+        // Capacity ring + count — also flat.
         Container(
           padding: const EdgeInsets.fromLTRB(6, 5, 12, 5),
           decoration: popSurface(
-              fill: AppColors.paper, radius: AppRadii.pill, stroke: 2.5),
+              fill: AppColors.paper, radius: AppRadii.pill, shadow: false),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               SizedBox(
                 width: 24,
                 height: 24,
-                child: CustomPaint(painter: _CapacityRingPainter(treeCount / 100)),
+                child: CustomPaint(
+                    painter: _CapacityRingPainter(treeCount / kBiomeCapacity)),
               ),
               const SizedBox(width: 7),
-              Text('🌳 $treeCount/100',
+              Text('🌳 $treeCount/$kBiomeCapacity',
                   style: AppType.label.copyWith(fontSize: 13)),
             ],
           ),
         ),
-        if (worldsCompleted >= 1) ...[
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.only(left: 4),
-            child: Text(
-              worldsCompleted == 1
-                  ? '1 world completed'
-                  : '$worldsCompleted worlds completed',
-              style: AppType.caption.copyWith(color: AppColors.ink),
-            ),
-          ),
-        ],
       ],
+    );
+  }
+}
+
+/// Prominent bottom-of-screen reboot CTA, shown on a full (locked) world.
+class _RebootButton extends StatelessWidget {
+  const _RebootButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopTappable(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 14),
+        decoration: popSurface(
+            fill: AppColors.popCoral, radius: AppRadii.pill, stroke: 3),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.restart_alt_rounded, size: 20, color: Colors.white),
+            const SizedBox(width: 8),
+            Text('Reboot Biome',
+                style: AppType.label.copyWith(fontSize: 16, color: Colors.white)),
+          ],
+        ),
+      ),
     );
   }
 }

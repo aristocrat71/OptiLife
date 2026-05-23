@@ -50,6 +50,15 @@ class _SideQuestPageState extends ConsumerState<SideQuestPage> {
     }
   }
 
+  Future<void> _onUndo(String questId) async {
+    final outcome = await ref.read(gameRepositoryProvider).unmarkQuest(questId);
+    if (outcome == ActionOutcome.leveledDown) {
+      _snack('🍂 Level down — newest tree removed.');
+    } else if (outcome == ActionOutcome.blockedNoEnergy) {
+      _snack('Life energy already at 0.');
+    }
+  }
+
   Future<void> _onReroll() async {
     final r = await ref.read(gameRepositoryProvider).reroll();
     _snack(switch (r) {
@@ -114,9 +123,7 @@ class _SideQuestPageState extends ConsumerState<SideQuestPage> {
                                 rolled: rq,
                                 readOnly: isPast,
                                 onMark: () => _onMark(rq.quest.id),
-                                onUndo: () => ref
-                                    .read(gameRepositoryProvider)
-                                    .unmarkQuest(rq.quest.id),
+                                onUndo: () => _onUndo(rq.quest.id),
                               ),
                               const SizedBox(height: 14),
                             ],

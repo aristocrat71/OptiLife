@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import '../core/date_utils.dart';
 import '../core/enums.dart';
 import '../core/le_math.dart';
+import '../core/limits.dart';
 import 'database.dart';
 
 /// Result of a mark/log mutation.
@@ -21,6 +22,10 @@ enum ActionOutcome {
 
   /// Placement lock is active — nothing happened (Data Models §7.1 step 1).
   blocked,
+
+  /// Tried to uncheck while LE is already 0 (e.g. after a reboot, where the
+  /// completion/log row survives but LE was reset). Nothing happened.
+  blockedNoEnergy,
 }
 
 enum PlaceOutcome { placed, placedBiomeFull, noPending }
@@ -45,6 +50,8 @@ class GameRepository {
     return _db.transaction(() async {
       final app = await _appState();
       if (app.pendingTreeCategory != null) return ActionOutcome.blocked;
+      // Full biome must be rebooted before more LE can be earned (§4.3).
+      if (await _treeCount() >= kBiomeCapacity) return ActionOutcome.blocked;
 
       final quest = await (_db.select(_db.quests)
             ..where((t) => t.id.equals(questId)))
@@ -76,6 +83,9 @@ class GameRepository {
             ..limit(1))
           .getSingleOrNull();
       if (completion == null) return ActionOutcome.applied;
+      // LE can't go below 0, so unchecking with none banked is a no-op — block
+      // it and tell the user (Data Models §7.6: reboot keeps the row, zeroes LE).
+      if (app.lifetimeLe == 0) return ActionOutcome.blockedNoEnergy;
 
       await (_db.delete(_db.questCompletions)
             ..where((t) => t.id.equals(completion.id)))
@@ -95,8 +105,15 @@ class GameRepository {
             ..where((t) => t.habitId.equals(habitId) & t.date.equals(today)))
           .getSingleOrNull();
 
+      // Block logging (LE gain) on a full biome, but allow un-logging so the
+      // user can still undo. Only the gain path can push past the cap.
+      if (existing == null && await _treeCount() >= kBiomeCapacity) {
+        return ActionOutcome.blocked;
+      }
+
       if (existing != null) {
-        // unlog
+        // unlog — but not below 0 LE (see unmarkQuest note).
+        if (app.lifetimeLe == 0) return ActionOutcome.blockedNoEnergy;
         await (_db.delete(_db.habitLogs)..where((t) => t.id.equals(existing.id)))
             .go();
         return _applyLeDelta(app.lifetimeLe, -existing.leAwarded);
@@ -136,7 +153,9 @@ class GameRepository {
           pendingTreeCategory: Value(null)));
 
       final count = await _treeCount();
-      return count >= 100 ? PlaceOutcome.placedBiomeFull : PlaceOutcome.placed;
+      return count >= kBiomeCapacity
+          ? PlaceOutcome.placedBiomeFull
+          : PlaceOutcome.placed;
     });
   }
 
