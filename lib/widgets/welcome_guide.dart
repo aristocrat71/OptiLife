@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/theme.dart';
+import 'app_tutorial.dart';
 import 'pop_tappable.dart';
 
 /// Online how-to-use guide. TODO: point at the real manual page once the
@@ -30,14 +31,14 @@ Future<void> showWelcomeGuide(BuildContext context) async {
     body: 'Human lifeform detected... Please go through '
         'the visual guide which will teach you how to operate the tools '
         'available in the system.',
-    primaryLabel: 'View the guide',
+    primaryLabel: 'Show tutorial',
     onPrimary: (ctx) => Navigator.of(ctx).pop(true),
     secondaryLabel: 'Cancel',
     onSecondary: (ctx) => Navigator.of(ctx).pop(false),
   );
   if (!context.mounted) return;
   if (view == true) {
-    await openGuide(context);
+    await showAppTutorial(context);
   } else if (view == false) {
     await _showExploreYourself(context);
   }
