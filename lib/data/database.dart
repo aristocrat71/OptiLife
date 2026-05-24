@@ -28,7 +28,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -46,6 +46,11 @@ class AppDatabase extends _$AppDatabase {
             final today = dateOnly(DateTime.now());
             await (delete(dailyQuestRolls)..where((t) => t.date.equals(today)))
                 .go();
+          }
+          if (from < 4) {
+            // Reminder time columns added for notifications.
+            await m.addColumn(settings, settings.morningReminderMin);
+            await m.addColumn(settings, settings.eveningReminderMin);
           }
         },
         beforeOpen: (details) async {
@@ -263,6 +268,12 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> setNotificationsEnabled(bool v) => _patchSettings(
       SettingsCompanion(notificationsEnabled: Value(v)));
+
+  Future<void> setMorningReminderMin(int min) => _patchSettings(
+      SettingsCompanion(morningReminderMin: Value(min.clamp(0, 1439))));
+
+  Future<void> setEveningReminderMin(int min) => _patchSettings(
+      SettingsCompanion(eveningReminderMin: Value(min.clamp(0, 1439))));
 
   Future<void> _patchSettings(SettingsCompanion patch) =>
       (update(settings)..where((t) => t.id.equals(1)))

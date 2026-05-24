@@ -630,6 +630,28 @@ class $SettingsTable extends Settings
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _morningReminderMinMeta =
+      const VerificationMeta('morningReminderMin');
+  @override
+  late final GeneratedColumn<int> morningReminderMin = GeneratedColumn<int>(
+    'morning_reminder_min',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(9 * 60),
+  );
+  static const VerificationMeta _eveningReminderMinMeta =
+      const VerificationMeta('eveningReminderMin');
+  @override
+  late final GeneratedColumn<int> eveningReminderMin = GeneratedColumn<int>(
+    'evening_reminder_min',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(20 * 60),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -662,6 +684,8 @@ class $SettingsTable extends Settings
     journalAlignment,
     questsPerDay,
     notificationsEnabled,
+    morningReminderMin,
+    eveningReminderMin,
     createdAt,
     lastModified,
   ];
@@ -704,6 +728,24 @@ class $SettingsTable extends Settings
         notificationsEnabled.isAcceptableOrUnknown(
           data['notifications_enabled']!,
           _notificationsEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('morning_reminder_min')) {
+      context.handle(
+        _morningReminderMinMeta,
+        morningReminderMin.isAcceptableOrUnknown(
+          data['morning_reminder_min']!,
+          _morningReminderMinMeta,
+        ),
+      );
+    }
+    if (data.containsKey('evening_reminder_min')) {
+      context.handle(
+        _eveningReminderMinMeta,
+        eveningReminderMin.isAcceptableOrUnknown(
+          data['evening_reminder_min']!,
+          _eveningReminderMinMeta,
         ),
       );
     }
@@ -759,6 +801,14 @@ class $SettingsTable extends Settings
         DriftSqlType.bool,
         data['${effectivePrefix}notifications_enabled'],
       )!,
+      morningReminderMin: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}morning_reminder_min'],
+      )!,
+      eveningReminderMin: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}evening_reminder_min'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -790,6 +840,8 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
   final JournalAlignment journalAlignment;
   final int questsPerDay;
   final bool notificationsEnabled;
+  final int morningReminderMin;
+  final int eveningReminderMin;
   final DateTime createdAt;
   final DateTime lastModified;
   const SettingsRow({
@@ -799,6 +851,8 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
     required this.journalAlignment,
     required this.questsPerDay,
     required this.notificationsEnabled,
+    required this.morningReminderMin,
+    required this.eveningReminderMin,
     required this.createdAt,
     required this.lastModified,
   });
@@ -819,6 +873,8 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
     }
     map['quests_per_day'] = Variable<int>(questsPerDay);
     map['notifications_enabled'] = Variable<bool>(notificationsEnabled);
+    map['morning_reminder_min'] = Variable<int>(morningReminderMin);
+    map['evening_reminder_min'] = Variable<int>(eveningReminderMin);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['last_modified'] = Variable<DateTime>(lastModified);
     return map;
@@ -832,6 +888,8 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
       journalAlignment: Value(journalAlignment),
       questsPerDay: Value(questsPerDay),
       notificationsEnabled: Value(notificationsEnabled),
+      morningReminderMin: Value(morningReminderMin),
+      eveningReminderMin: Value(eveningReminderMin),
       createdAt: Value(createdAt),
       lastModified: Value(lastModified),
     );
@@ -855,6 +913,8 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
       notificationsEnabled: serializer.fromJson<bool>(
         json['notificationsEnabled'],
       ),
+      morningReminderMin: serializer.fromJson<int>(json['morningReminderMin']),
+      eveningReminderMin: serializer.fromJson<int>(json['eveningReminderMin']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       lastModified: serializer.fromJson<DateTime>(json['lastModified']),
     );
@@ -873,6 +933,8 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
       ),
       'questsPerDay': serializer.toJson<int>(questsPerDay),
       'notificationsEnabled': serializer.toJson<bool>(notificationsEnabled),
+      'morningReminderMin': serializer.toJson<int>(morningReminderMin),
+      'eveningReminderMin': serializer.toJson<int>(eveningReminderMin),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'lastModified': serializer.toJson<DateTime>(lastModified),
     };
@@ -885,6 +947,8 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
     JournalAlignment? journalAlignment,
     int? questsPerDay,
     bool? notificationsEnabled,
+    int? morningReminderMin,
+    int? eveningReminderMin,
     DateTime? createdAt,
     DateTime? lastModified,
   }) => SettingsRow(
@@ -894,6 +958,8 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
     journalAlignment: journalAlignment ?? this.journalAlignment,
     questsPerDay: questsPerDay ?? this.questsPerDay,
     notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+    morningReminderMin: morningReminderMin ?? this.morningReminderMin,
+    eveningReminderMin: eveningReminderMin ?? this.eveningReminderMin,
     createdAt: createdAt ?? this.createdAt,
     lastModified: lastModified ?? this.lastModified,
   );
@@ -915,6 +981,12 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
       notificationsEnabled: data.notificationsEnabled.present
           ? data.notificationsEnabled.value
           : this.notificationsEnabled,
+      morningReminderMin: data.morningReminderMin.present
+          ? data.morningReminderMin.value
+          : this.morningReminderMin,
+      eveningReminderMin: data.eveningReminderMin.present
+          ? data.eveningReminderMin.value
+          : this.eveningReminderMin,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       lastModified: data.lastModified.present
           ? data.lastModified.value
@@ -931,6 +1003,8 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
           ..write('journalAlignment: $journalAlignment, ')
           ..write('questsPerDay: $questsPerDay, ')
           ..write('notificationsEnabled: $notificationsEnabled, ')
+          ..write('morningReminderMin: $morningReminderMin, ')
+          ..write('eveningReminderMin: $eveningReminderMin, ')
           ..write('createdAt: $createdAt, ')
           ..write('lastModified: $lastModified')
           ..write(')'))
@@ -945,6 +1019,8 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
     journalAlignment,
     questsPerDay,
     notificationsEnabled,
+    morningReminderMin,
+    eveningReminderMin,
     createdAt,
     lastModified,
   );
@@ -958,6 +1034,8 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
           other.journalAlignment == this.journalAlignment &&
           other.questsPerDay == this.questsPerDay &&
           other.notificationsEnabled == this.notificationsEnabled &&
+          other.morningReminderMin == this.morningReminderMin &&
+          other.eveningReminderMin == this.eveningReminderMin &&
           other.createdAt == this.createdAt &&
           other.lastModified == this.lastModified);
 }
@@ -969,6 +1047,8 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
   final Value<JournalAlignment> journalAlignment;
   final Value<int> questsPerDay;
   final Value<bool> notificationsEnabled;
+  final Value<int> morningReminderMin;
+  final Value<int> eveningReminderMin;
   final Value<DateTime> createdAt;
   final Value<DateTime> lastModified;
   const SettingsCompanion({
@@ -978,6 +1058,8 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
     this.journalAlignment = const Value.absent(),
     this.questsPerDay = const Value.absent(),
     this.notificationsEnabled = const Value.absent(),
+    this.morningReminderMin = const Value.absent(),
+    this.eveningReminderMin = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.lastModified = const Value.absent(),
   });
@@ -988,6 +1070,8 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
     this.journalAlignment = const Value.absent(),
     this.questsPerDay = const Value.absent(),
     this.notificationsEnabled = const Value.absent(),
+    this.morningReminderMin = const Value.absent(),
+    this.eveningReminderMin = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.lastModified = const Value.absent(),
   });
@@ -998,6 +1082,8 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
     Expression<String>? journalAlignment,
     Expression<int>? questsPerDay,
     Expression<bool>? notificationsEnabled,
+    Expression<int>? morningReminderMin,
+    Expression<int>? eveningReminderMin,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? lastModified,
   }) {
@@ -1009,6 +1095,10 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
       if (questsPerDay != null) 'quests_per_day': questsPerDay,
       if (notificationsEnabled != null)
         'notifications_enabled': notificationsEnabled,
+      if (morningReminderMin != null)
+        'morning_reminder_min': morningReminderMin,
+      if (eveningReminderMin != null)
+        'evening_reminder_min': eveningReminderMin,
       if (createdAt != null) 'created_at': createdAt,
       if (lastModified != null) 'last_modified': lastModified,
     });
@@ -1021,6 +1111,8 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
     Value<JournalAlignment>? journalAlignment,
     Value<int>? questsPerDay,
     Value<bool>? notificationsEnabled,
+    Value<int>? morningReminderMin,
+    Value<int>? eveningReminderMin,
     Value<DateTime>? createdAt,
     Value<DateTime>? lastModified,
   }) {
@@ -1031,6 +1123,8 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
       journalAlignment: journalAlignment ?? this.journalAlignment,
       questsPerDay: questsPerDay ?? this.questsPerDay,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      morningReminderMin: morningReminderMin ?? this.morningReminderMin,
+      eveningReminderMin: eveningReminderMin ?? this.eveningReminderMin,
       createdAt: createdAt ?? this.createdAt,
       lastModified: lastModified ?? this.lastModified,
     );
@@ -1061,6 +1155,12 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
     if (notificationsEnabled.present) {
       map['notifications_enabled'] = Variable<bool>(notificationsEnabled.value);
     }
+    if (morningReminderMin.present) {
+      map['morning_reminder_min'] = Variable<int>(morningReminderMin.value);
+    }
+    if (eveningReminderMin.present) {
+      map['evening_reminder_min'] = Variable<int>(eveningReminderMin.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1079,6 +1179,8 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
           ..write('journalAlignment: $journalAlignment, ')
           ..write('questsPerDay: $questsPerDay, ')
           ..write('notificationsEnabled: $notificationsEnabled, ')
+          ..write('morningReminderMin: $morningReminderMin, ')
+          ..write('eveningReminderMin: $eveningReminderMin, ')
           ..write('createdAt: $createdAt, ')
           ..write('lastModified: $lastModified')
           ..write(')'))
@@ -5278,6 +5380,8 @@ typedef $$SettingsTableCreateCompanionBuilder =
       Value<JournalAlignment> journalAlignment,
       Value<int> questsPerDay,
       Value<bool> notificationsEnabled,
+      Value<int> morningReminderMin,
+      Value<int> eveningReminderMin,
       Value<DateTime> createdAt,
       Value<DateTime> lastModified,
     });
@@ -5289,6 +5393,8 @@ typedef $$SettingsTableUpdateCompanionBuilder =
       Value<JournalAlignment> journalAlignment,
       Value<int> questsPerDay,
       Value<bool> notificationsEnabled,
+      Value<int> morningReminderMin,
+      Value<int> eveningReminderMin,
       Value<DateTime> createdAt,
       Value<DateTime> lastModified,
     });
@@ -5331,6 +5437,16 @@ class $$SettingsTableFilterComposer
 
   ColumnFilters<bool> get notificationsEnabled => $composableBuilder(
     column: $table.notificationsEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get morningReminderMin => $composableBuilder(
+    column: $table.morningReminderMin,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get eveningReminderMin => $composableBuilder(
+    column: $table.eveningReminderMin,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5384,6 +5500,16 @@ class $$SettingsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get morningReminderMin => $composableBuilder(
+    column: $table.morningReminderMin,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get eveningReminderMin => $composableBuilder(
+    column: $table.eveningReminderMin,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -5434,6 +5560,16 @@ class $$SettingsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get morningReminderMin => $composableBuilder(
+    column: $table.morningReminderMin,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get eveningReminderMin => $composableBuilder(
+    column: $table.eveningReminderMin,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -5480,6 +5616,8 @@ class $$SettingsTableTableManager
                 Value<JournalAlignment> journalAlignment = const Value.absent(),
                 Value<int> questsPerDay = const Value.absent(),
                 Value<bool> notificationsEnabled = const Value.absent(),
+                Value<int> morningReminderMin = const Value.absent(),
+                Value<int> eveningReminderMin = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> lastModified = const Value.absent(),
               }) => SettingsCompanion(
@@ -5489,6 +5627,8 @@ class $$SettingsTableTableManager
                 journalAlignment: journalAlignment,
                 questsPerDay: questsPerDay,
                 notificationsEnabled: notificationsEnabled,
+                morningReminderMin: morningReminderMin,
+                eveningReminderMin: eveningReminderMin,
                 createdAt: createdAt,
                 lastModified: lastModified,
               ),
@@ -5500,6 +5640,8 @@ class $$SettingsTableTableManager
                 Value<JournalAlignment> journalAlignment = const Value.absent(),
                 Value<int> questsPerDay = const Value.absent(),
                 Value<bool> notificationsEnabled = const Value.absent(),
+                Value<int> morningReminderMin = const Value.absent(),
+                Value<int> eveningReminderMin = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> lastModified = const Value.absent(),
               }) => SettingsCompanion.insert(
@@ -5509,6 +5651,8 @@ class $$SettingsTableTableManager
                 journalAlignment: journalAlignment,
                 questsPerDay: questsPerDay,
                 notificationsEnabled: notificationsEnabled,
+                morningReminderMin: morningReminderMin,
+                eveningReminderMin: eveningReminderMin,
                 createdAt: createdAt,
                 lastModified: lastModified,
               ),
