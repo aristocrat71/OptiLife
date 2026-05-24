@@ -27,7 +27,7 @@ Future<bool> showRebootSheet(BuildContext context) async {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('🌍', style: TextStyle(fontSize: 44)),
+              const Icon(Icons.public_rounded, size: 44, color: AppColors.popTeal),
               const SizedBox(height: 12),
               Text('YOUR BIOME IS COMPLETE',
                   style: AppType.label.copyWith(fontSize: 16, letterSpacing: 1)),
