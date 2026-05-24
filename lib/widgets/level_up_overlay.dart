@@ -123,13 +123,24 @@ class _LevelUpOverlayState extends State<_LevelUpOverlay>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              '✦  LEVEL UP!  ✦',
-              style: AppType.label.copyWith(
-                fontSize: 16,
-                color: AppColors.cream,
-                letterSpacing: 1.2,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.auto_awesome_rounded,
+                    size: 16, color: AppColors.cream),
+                const SizedBox(width: 8),
+                Text(
+                  'LEVEL UP!',
+                  style: AppType.label.copyWith(
+                    fontSize: 16,
+                    color: AppColors.cream,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.auto_awesome_rounded,
+                    size: 16, color: AppColors.cream),
+              ],
             ),
             const SizedBox(height: 12),
             Text('LVL ${widget.level}',
@@ -153,8 +164,16 @@ class _LevelUpOverlayState extends State<_LevelUpOverlay>
                   stroke: 2.5,
                   shadow: false,
                 ),
-                child: Text('Plant it 🌳',
-                    style: AppType.label.copyWith(fontSize: 15)),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Plant it',
+                        style: AppType.label.copyWith(fontSize: 15)),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.park_rounded,
+                        size: 16, color: AppColors.ink),
+                  ],
+                ),
               ),
             ),
           ],

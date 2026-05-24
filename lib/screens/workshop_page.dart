@@ -1099,9 +1099,19 @@ class _HabitSheetState extends ConsumerState<_HabitSheet> {
                           size: 15, color: AppColors.mutedInk),
                       const SizedBox(width: 6),
                       Expanded(
-                        child: Text('Habits are daily. Logged = +2⚡.',
-                            style: AppType.caption
-                                .copyWith(color: AppColors.textMuted)),
+                        child: Text.rich(
+                          TextSpan(children: [
+                            const TextSpan(text: 'Habits are daily. Logged = +2'),
+                            WidgetSpan(
+                              alignment: PlaceholderAlignment.middle,
+                              child: Icon(Icons.bolt,
+                                  size: 14, color: AppColors.energy),
+                            ),
+                            const TextSpan(text: '.'),
+                          ]),
+                          style: AppType.caption
+                              .copyWith(color: AppColors.textMuted),
+                        ),
                       ),
                     ],
                   ),
