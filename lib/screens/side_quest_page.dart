@@ -75,12 +75,15 @@ class _SideQuestPageState extends ConsumerState<SideQuestPage> {
     final isPast = ref.watch(isPastProvider);
     final isFuture = ref.watch(isFutureProvider);
     final quests = ref.watch(rolledQuestsForSelectedDateProvider);
+    final list = quests.asData?.value;
+    final total = list?.length ?? 0;
+    final done = list?.where((e) => e.done == true).length ?? 0;
 
     return DayPager(
       padding: const EdgeInsets.fromLTRB(
           AppSpace.screenGutter, 184, AppSpace.screenGutter, 24),
       children: [
-        _header(quests.asData?.value),
+        _header(showReroll: !isPast && !isFuture),
         const SizedBox(height: 16),
         // The quest cards live in their own scrollable box (so a long list
         // scrolls internally). Dragging inside it scrolls; dragging anywhere
@@ -133,19 +136,21 @@ class _SideQuestPageState extends ConsumerState<SideQuestPage> {
                     ),
             ),
           ),
-        // Reroll sits below the box — part of the day-change (outside) zone.
-        if (!isPast && !isFuture) ...[
+        // The done count sits below the box — part of the day-change (outside)
+        // zone. Reroll now lives up in the header.
+        if (!isFuture && total > 0) ...[
           const SizedBox(height: 16),
-          _rerollButton(),
+          Center(
+            child: Text('$done of $total done',
+                style: AppType.label.copyWith(fontSize: 14)),
+          ),
           const SizedBox(height: 30), // lift it up off the bottom a bit
         ],
       ],
     );
   }
 
-  Widget _header(List<dynamic>? list) {
-    final total = list?.length ?? 0;
-    final done = list?.where((e) => e.done == true).length ?? 0;
+  Widget _header({required bool showReroll}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -160,10 +165,8 @@ class _SideQuestPageState extends ConsumerState<SideQuestPage> {
                   color: AppColors.popPurple,
                   borderRadius: AppRadii.r(AppRadii.pill))),
         ]),
-        // No count when nothing rolled (future / empty pool).
-        if (total > 0)
-          Text('$done of $total done',
-              style: AppType.label.copyWith(fontSize: 14)),
+        // Reroll lives here now — only on today (not past/future).
+        if (showReroll) _rerollButton(),
       ],
     );
   }
@@ -172,11 +175,17 @@ class _SideQuestPageState extends ConsumerState<SideQuestPage> {
     return Center(
       child: PopTappable(
         onTap: _confirmReroll,
-        child: Padding(
+        child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppColors.paper,
+            borderRadius: AppRadii.r(AppRadii.pill),
+            border: Border.all(color: AppColors.ink, width: 2.5),
+            boxShadow: AppShadows.card,
+          ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             const _RerollDie(),
-            const SizedBox(width: 9),
+            const SizedBox(width: 7),
             Text('REROLL',
                 style: AppType.label
                     .copyWith(fontSize: 19, color: AppColors.popCoral)),
@@ -285,7 +294,7 @@ class _RerollDie extends StatefulWidget {
 class _RerollDieState extends State<_RerollDie>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 3600))
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 5400))
         ..repeat();
 
   // Pip positions on a 3×3 grid (indices 0–8) per face value.
@@ -310,19 +319,30 @@ class _RerollDieState extends State<_RerollDie>
       animation: _c,
       builder: (_, _) {
         final t = _c.value; // 0..1
-        final rot = t * 2 * math.pi; // one full turn per loop — seamless, slower
-        final face = 1 + (t * 6).floor() % 6; // 6 faces over the loop (~0.6s each)
-        return Transform.rotate(
-          angle: rot,
+        // Tumble end-over-end about the horizontal axis — reads as a die
+        // flipping onto its side rather than spinning flat. Three full flips
+        // per loop, and we swap the face each half-flip (when it's edge-on and
+        // momentarily hidden) so a fresh number lands face-up each time.
+        final flips = t * 6; // 6 half-flips => 3 full tumbles per loop
+        final angle = flips * math.pi;
+        // Swap the face at each edge-on moment (flips = 0.5, 1.5, …) — that's
+        // when the die is turned sideways and momentarily hidden, so the change
+        // is invisible and a fresh number appears to land each flip.
+        final face = 1 + (flips + 0.5).floor() % 6;
+        final transform = Matrix4.identity()
+          ..setEntry(3, 2, 0.002) // perspective
+          ..rotateX(angle);
+        return Transform(
+          alignment: Alignment.center,
+          transform: transform,
           child: Container(
-            width: 46,
-            height: 46,
-            padding: const EdgeInsets.all(8),
+            width: 24,
+            height: 24,
+            padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
               color: AppColors.paper,
               borderRadius: AppRadii.r(AppRadii.sm),
-              border: Border.all(color: AppColors.ink, width: 2.5),
-              boxShadow: AppShadows.card,
+              border: Border.all(color: AppColors.ink, width: 1.5),
             ),
             child: _pips(face),
           ),
@@ -344,8 +364,8 @@ class _RerollDieState extends State<_RerollDie>
                     child: Center(
                       child: on.contains(r * 3 + c)
                           ? Container(
-                              width: 7,
-                              height: 7,
+                              width: 3.5,
+                              height: 3.5,
                               decoration: const BoxDecoration(
                                   color: AppColors.popCoral,
                                   shape: BoxShape.circle),
