@@ -92,6 +92,16 @@ class AppDatabase extends _$AppDatabase {
       (select(journalEntries)..where((t) => t.date.equals(day)))
           .watchSingleOrNull();
 
+  /// Non-empty journal entries within an inclusive date range, oldest first —
+  /// the source for the PDF export.
+  Future<List<JournalEntry>> journalEntriesInRange(
+          DateTime from, DateTime to) =>
+      (select(journalEntries)
+            ..where((t) => t.date.isBetweenValues(from, to))
+            ..where((t) => t.body.trim().length.isBiggerThanValue(0))
+            ..orderBy([(t) => OrderingTerm(expression: t.date)]))
+          .get();
+
   Stream<List<HabitLog>> watchHabitLogsForDate(DateTime day) =>
       (select(habitLogs)..where((t) => t.date.equals(day))).watch();
 

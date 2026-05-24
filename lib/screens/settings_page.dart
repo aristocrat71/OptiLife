@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../state/app_providers.dart';
 import '../theme/theme.dart';
+import '../widgets/journal_export.dart';
 import '../widgets/journal_style_sheet.dart';
 import '../widgets/pop_tappable.dart';
 import '../widgets/shell_controls.dart';
@@ -18,6 +19,7 @@ class SettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider).asData?.value;
+    final app = ref.watch(appStateProvider).asData?.value;
     final db = ref.read(databaseProvider);
 
     return Scaffold(
@@ -110,8 +112,16 @@ class SettingsPage extends ConsumerWidget {
                           const _Divider(),
                           _NavRow(
                             label: 'Export journal',
-                            trailing: _soonChip(),
-                            onTap: null,
+                            trailing: const Icon(Icons.chevron_right_rounded,
+                                color: AppColors.mutedInk),
+                            onTap: () => showJournalExportDialog(
+                              context,
+                              db: db,
+                              font: settings.journalFont,
+                              alignment: settings.journalAlignment,
+                              accountCreated:
+                                  app?.createdAt ?? DateTime.now(),
+                            ),
                           ),
                           const _Divider(),
                           _NavRow(
