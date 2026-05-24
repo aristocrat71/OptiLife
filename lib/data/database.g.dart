@@ -79,6 +79,21 @@ class $AppStateTable extends AppState
         type: DriftSqlType.dateTime,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _welcomeShownMeta = const VerificationMeta(
+    'welcomeShown',
+  );
+  @override
+  late final GeneratedColumn<bool> welcomeShown = GeneratedColumn<bool>(
+    'welcome_shown',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("welcome_shown" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -111,6 +126,7 @@ class $AppStateTable extends AppState
     biomesCompleted,
     pendingTreeCategory,
     lastRerollDate,
+    welcomeShown,
     createdAt,
     lastModified,
   ];
@@ -159,6 +175,15 @@ class $AppStateTable extends AppState
         lastRerollDate.isAcceptableOrUnknown(
           data['last_reroll_date']!,
           _lastRerollDateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('welcome_shown')) {
+      context.handle(
+        _welcomeShownMeta,
+        welcomeShown.isAcceptableOrUnknown(
+          data['welcome_shown']!,
+          _welcomeShownMeta,
         ),
       );
     }
@@ -213,6 +238,10 @@ class $AppStateTable extends AppState
         DriftSqlType.dateTime,
         data['${effectivePrefix}last_reroll_date'],
       ),
+      welcomeShown: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}welcome_shown'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -246,6 +275,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
   final int biomesCompleted;
   final QuestCategory? pendingTreeCategory;
   final DateTime? lastRerollDate;
+  final bool welcomeShown;
   final DateTime createdAt;
   final DateTime lastModified;
   const AppStateRow({
@@ -255,6 +285,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
     required this.biomesCompleted,
     this.pendingTreeCategory,
     this.lastRerollDate,
+    required this.welcomeShown,
     required this.createdAt,
     required this.lastModified,
   });
@@ -275,6 +306,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
     if (!nullToAbsent || lastRerollDate != null) {
       map['last_reroll_date'] = Variable<DateTime>(lastRerollDate);
     }
+    map['welcome_shown'] = Variable<bool>(welcomeShown);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['last_modified'] = Variable<DateTime>(lastModified);
     return map;
@@ -292,6 +324,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
       lastRerollDate: lastRerollDate == null && nullToAbsent
           ? const Value.absent()
           : Value(lastRerollDate),
+      welcomeShown: Value(welcomeShown),
       createdAt: Value(createdAt),
       lastModified: Value(lastModified),
     );
@@ -312,6 +345,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
       pendingTreeCategory: $AppStateTable.$converterpendingTreeCategoryn
           .fromJson(serializer.fromJson<String?>(json['pendingTreeCategory'])),
       lastRerollDate: serializer.fromJson<DateTime?>(json['lastRerollDate']),
+      welcomeShown: serializer.fromJson<bool>(json['welcomeShown']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       lastModified: serializer.fromJson<DateTime>(json['lastModified']),
     );
@@ -332,6 +366,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
         ),
       ),
       'lastRerollDate': serializer.toJson<DateTime?>(lastRerollDate),
+      'welcomeShown': serializer.toJson<bool>(welcomeShown),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'lastModified': serializer.toJson<DateTime>(lastModified),
     };
@@ -344,6 +379,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
     int? biomesCompleted,
     Value<QuestCategory?> pendingTreeCategory = const Value.absent(),
     Value<DateTime?> lastRerollDate = const Value.absent(),
+    bool? welcomeShown,
     DateTime? createdAt,
     DateTime? lastModified,
   }) => AppStateRow(
@@ -357,6 +393,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
     lastRerollDate: lastRerollDate.present
         ? lastRerollDate.value
         : this.lastRerollDate,
+    welcomeShown: welcomeShown ?? this.welcomeShown,
     createdAt: createdAt ?? this.createdAt,
     lastModified: lastModified ?? this.lastModified,
   );
@@ -378,6 +415,9 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
       lastRerollDate: data.lastRerollDate.present
           ? data.lastRerollDate.value
           : this.lastRerollDate,
+      welcomeShown: data.welcomeShown.present
+          ? data.welcomeShown.value
+          : this.welcomeShown,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       lastModified: data.lastModified.present
           ? data.lastModified.value
@@ -394,6 +434,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
           ..write('biomesCompleted: $biomesCompleted, ')
           ..write('pendingTreeCategory: $pendingTreeCategory, ')
           ..write('lastRerollDate: $lastRerollDate, ')
+          ..write('welcomeShown: $welcomeShown, ')
           ..write('createdAt: $createdAt, ')
           ..write('lastModified: $lastModified')
           ..write(')'))
@@ -408,6 +449,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
     biomesCompleted,
     pendingTreeCategory,
     lastRerollDate,
+    welcomeShown,
     createdAt,
     lastModified,
   );
@@ -421,6 +463,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
           other.biomesCompleted == this.biomesCompleted &&
           other.pendingTreeCategory == this.pendingTreeCategory &&
           other.lastRerollDate == this.lastRerollDate &&
+          other.welcomeShown == this.welcomeShown &&
           other.createdAt == this.createdAt &&
           other.lastModified == this.lastModified);
 }
@@ -432,6 +475,7 @@ class AppStateCompanion extends UpdateCompanion<AppStateRow> {
   final Value<int> biomesCompleted;
   final Value<QuestCategory?> pendingTreeCategory;
   final Value<DateTime?> lastRerollDate;
+  final Value<bool> welcomeShown;
   final Value<DateTime> createdAt;
   final Value<DateTime> lastModified;
   const AppStateCompanion({
@@ -441,6 +485,7 @@ class AppStateCompanion extends UpdateCompanion<AppStateRow> {
     this.biomesCompleted = const Value.absent(),
     this.pendingTreeCategory = const Value.absent(),
     this.lastRerollDate = const Value.absent(),
+    this.welcomeShown = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.lastModified = const Value.absent(),
   });
@@ -451,6 +496,7 @@ class AppStateCompanion extends UpdateCompanion<AppStateRow> {
     this.biomesCompleted = const Value.absent(),
     this.pendingTreeCategory = const Value.absent(),
     this.lastRerollDate = const Value.absent(),
+    this.welcomeShown = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.lastModified = const Value.absent(),
   });
@@ -461,6 +507,7 @@ class AppStateCompanion extends UpdateCompanion<AppStateRow> {
     Expression<int>? biomesCompleted,
     Expression<String>? pendingTreeCategory,
     Expression<DateTime>? lastRerollDate,
+    Expression<bool>? welcomeShown,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? lastModified,
   }) {
@@ -473,6 +520,7 @@ class AppStateCompanion extends UpdateCompanion<AppStateRow> {
       if (pendingTreeCategory != null)
         'pending_tree_category': pendingTreeCategory,
       if (lastRerollDate != null) 'last_reroll_date': lastRerollDate,
+      if (welcomeShown != null) 'welcome_shown': welcomeShown,
       if (createdAt != null) 'created_at': createdAt,
       if (lastModified != null) 'last_modified': lastModified,
     });
@@ -485,6 +533,7 @@ class AppStateCompanion extends UpdateCompanion<AppStateRow> {
     Value<int>? biomesCompleted,
     Value<QuestCategory?>? pendingTreeCategory,
     Value<DateTime?>? lastRerollDate,
+    Value<bool>? welcomeShown,
     Value<DateTime>? createdAt,
     Value<DateTime>? lastModified,
   }) {
@@ -496,6 +545,7 @@ class AppStateCompanion extends UpdateCompanion<AppStateRow> {
       biomesCompleted: biomesCompleted ?? this.biomesCompleted,
       pendingTreeCategory: pendingTreeCategory ?? this.pendingTreeCategory,
       lastRerollDate: lastRerollDate ?? this.lastRerollDate,
+      welcomeShown: welcomeShown ?? this.welcomeShown,
       createdAt: createdAt ?? this.createdAt,
       lastModified: lastModified ?? this.lastModified,
     );
@@ -528,6 +578,9 @@ class AppStateCompanion extends UpdateCompanion<AppStateRow> {
     if (lastRerollDate.present) {
       map['last_reroll_date'] = Variable<DateTime>(lastRerollDate.value);
     }
+    if (welcomeShown.present) {
+      map['welcome_shown'] = Variable<bool>(welcomeShown.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -546,6 +599,7 @@ class AppStateCompanion extends UpdateCompanion<AppStateRow> {
           ..write('biomesCompleted: $biomesCompleted, ')
           ..write('pendingTreeCategory: $pendingTreeCategory, ')
           ..write('lastRerollDate: $lastRerollDate, ')
+          ..write('welcomeShown: $welcomeShown, ')
           ..write('createdAt: $createdAt, ')
           ..write('lastModified: $lastModified')
           ..write(')'))
@@ -630,6 +684,28 @@ class $SettingsTable extends Settings
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _morningReminderMinMeta =
+      const VerificationMeta('morningReminderMin');
+  @override
+  late final GeneratedColumn<int> morningReminderMin = GeneratedColumn<int>(
+    'morning_reminder_min',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(9 * 60),
+  );
+  static const VerificationMeta _eveningReminderMinMeta =
+      const VerificationMeta('eveningReminderMin');
+  @override
+  late final GeneratedColumn<int> eveningReminderMin = GeneratedColumn<int>(
+    'evening_reminder_min',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(20 * 60),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -662,6 +738,8 @@ class $SettingsTable extends Settings
     journalAlignment,
     questsPerDay,
     notificationsEnabled,
+    morningReminderMin,
+    eveningReminderMin,
     createdAt,
     lastModified,
   ];
@@ -704,6 +782,24 @@ class $SettingsTable extends Settings
         notificationsEnabled.isAcceptableOrUnknown(
           data['notifications_enabled']!,
           _notificationsEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('morning_reminder_min')) {
+      context.handle(
+        _morningReminderMinMeta,
+        morningReminderMin.isAcceptableOrUnknown(
+          data['morning_reminder_min']!,
+          _morningReminderMinMeta,
+        ),
+      );
+    }
+    if (data.containsKey('evening_reminder_min')) {
+      context.handle(
+        _eveningReminderMinMeta,
+        eveningReminderMin.isAcceptableOrUnknown(
+          data['evening_reminder_min']!,
+          _eveningReminderMinMeta,
         ),
       );
     }
@@ -759,6 +855,14 @@ class $SettingsTable extends Settings
         DriftSqlType.bool,
         data['${effectivePrefix}notifications_enabled'],
       )!,
+      morningReminderMin: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}morning_reminder_min'],
+      )!,
+      eveningReminderMin: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}evening_reminder_min'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -790,6 +894,8 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
   final JournalAlignment journalAlignment;
   final int questsPerDay;
   final bool notificationsEnabled;
+  final int morningReminderMin;
+  final int eveningReminderMin;
   final DateTime createdAt;
   final DateTime lastModified;
   const SettingsRow({
@@ -799,6 +905,8 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
     required this.journalAlignment,
     required this.questsPerDay,
     required this.notificationsEnabled,
+    required this.morningReminderMin,
+    required this.eveningReminderMin,
     required this.createdAt,
     required this.lastModified,
   });
@@ -819,6 +927,8 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
     }
     map['quests_per_day'] = Variable<int>(questsPerDay);
     map['notifications_enabled'] = Variable<bool>(notificationsEnabled);
+    map['morning_reminder_min'] = Variable<int>(morningReminderMin);
+    map['evening_reminder_min'] = Variable<int>(eveningReminderMin);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['last_modified'] = Variable<DateTime>(lastModified);
     return map;
@@ -832,6 +942,8 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
       journalAlignment: Value(journalAlignment),
       questsPerDay: Value(questsPerDay),
       notificationsEnabled: Value(notificationsEnabled),
+      morningReminderMin: Value(morningReminderMin),
+      eveningReminderMin: Value(eveningReminderMin),
       createdAt: Value(createdAt),
       lastModified: Value(lastModified),
     );
@@ -855,6 +967,8 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
       notificationsEnabled: serializer.fromJson<bool>(
         json['notificationsEnabled'],
       ),
+      morningReminderMin: serializer.fromJson<int>(json['morningReminderMin']),
+      eveningReminderMin: serializer.fromJson<int>(json['eveningReminderMin']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       lastModified: serializer.fromJson<DateTime>(json['lastModified']),
     );
@@ -873,6 +987,8 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
       ),
       'questsPerDay': serializer.toJson<int>(questsPerDay),
       'notificationsEnabled': serializer.toJson<bool>(notificationsEnabled),
+      'morningReminderMin': serializer.toJson<int>(morningReminderMin),
+      'eveningReminderMin': serializer.toJson<int>(eveningReminderMin),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'lastModified': serializer.toJson<DateTime>(lastModified),
     };
@@ -885,6 +1001,8 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
     JournalAlignment? journalAlignment,
     int? questsPerDay,
     bool? notificationsEnabled,
+    int? morningReminderMin,
+    int? eveningReminderMin,
     DateTime? createdAt,
     DateTime? lastModified,
   }) => SettingsRow(
@@ -894,6 +1012,8 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
     journalAlignment: journalAlignment ?? this.journalAlignment,
     questsPerDay: questsPerDay ?? this.questsPerDay,
     notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+    morningReminderMin: morningReminderMin ?? this.morningReminderMin,
+    eveningReminderMin: eveningReminderMin ?? this.eveningReminderMin,
     createdAt: createdAt ?? this.createdAt,
     lastModified: lastModified ?? this.lastModified,
   );
@@ -915,6 +1035,12 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
       notificationsEnabled: data.notificationsEnabled.present
           ? data.notificationsEnabled.value
           : this.notificationsEnabled,
+      morningReminderMin: data.morningReminderMin.present
+          ? data.morningReminderMin.value
+          : this.morningReminderMin,
+      eveningReminderMin: data.eveningReminderMin.present
+          ? data.eveningReminderMin.value
+          : this.eveningReminderMin,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       lastModified: data.lastModified.present
           ? data.lastModified.value
@@ -931,6 +1057,8 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
           ..write('journalAlignment: $journalAlignment, ')
           ..write('questsPerDay: $questsPerDay, ')
           ..write('notificationsEnabled: $notificationsEnabled, ')
+          ..write('morningReminderMin: $morningReminderMin, ')
+          ..write('eveningReminderMin: $eveningReminderMin, ')
           ..write('createdAt: $createdAt, ')
           ..write('lastModified: $lastModified')
           ..write(')'))
@@ -945,6 +1073,8 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
     journalAlignment,
     questsPerDay,
     notificationsEnabled,
+    morningReminderMin,
+    eveningReminderMin,
     createdAt,
     lastModified,
   );
@@ -958,6 +1088,8 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
           other.journalAlignment == this.journalAlignment &&
           other.questsPerDay == this.questsPerDay &&
           other.notificationsEnabled == this.notificationsEnabled &&
+          other.morningReminderMin == this.morningReminderMin &&
+          other.eveningReminderMin == this.eveningReminderMin &&
           other.createdAt == this.createdAt &&
           other.lastModified == this.lastModified);
 }
@@ -969,6 +1101,8 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
   final Value<JournalAlignment> journalAlignment;
   final Value<int> questsPerDay;
   final Value<bool> notificationsEnabled;
+  final Value<int> morningReminderMin;
+  final Value<int> eveningReminderMin;
   final Value<DateTime> createdAt;
   final Value<DateTime> lastModified;
   const SettingsCompanion({
@@ -978,6 +1112,8 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
     this.journalAlignment = const Value.absent(),
     this.questsPerDay = const Value.absent(),
     this.notificationsEnabled = const Value.absent(),
+    this.morningReminderMin = const Value.absent(),
+    this.eveningReminderMin = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.lastModified = const Value.absent(),
   });
@@ -988,6 +1124,8 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
     this.journalAlignment = const Value.absent(),
     this.questsPerDay = const Value.absent(),
     this.notificationsEnabled = const Value.absent(),
+    this.morningReminderMin = const Value.absent(),
+    this.eveningReminderMin = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.lastModified = const Value.absent(),
   });
@@ -998,6 +1136,8 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
     Expression<String>? journalAlignment,
     Expression<int>? questsPerDay,
     Expression<bool>? notificationsEnabled,
+    Expression<int>? morningReminderMin,
+    Expression<int>? eveningReminderMin,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? lastModified,
   }) {
@@ -1009,6 +1149,10 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
       if (questsPerDay != null) 'quests_per_day': questsPerDay,
       if (notificationsEnabled != null)
         'notifications_enabled': notificationsEnabled,
+      if (morningReminderMin != null)
+        'morning_reminder_min': morningReminderMin,
+      if (eveningReminderMin != null)
+        'evening_reminder_min': eveningReminderMin,
       if (createdAt != null) 'created_at': createdAt,
       if (lastModified != null) 'last_modified': lastModified,
     });
@@ -1021,6 +1165,8 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
     Value<JournalAlignment>? journalAlignment,
     Value<int>? questsPerDay,
     Value<bool>? notificationsEnabled,
+    Value<int>? morningReminderMin,
+    Value<int>? eveningReminderMin,
     Value<DateTime>? createdAt,
     Value<DateTime>? lastModified,
   }) {
@@ -1031,6 +1177,8 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
       journalAlignment: journalAlignment ?? this.journalAlignment,
       questsPerDay: questsPerDay ?? this.questsPerDay,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      morningReminderMin: morningReminderMin ?? this.morningReminderMin,
+      eveningReminderMin: eveningReminderMin ?? this.eveningReminderMin,
       createdAt: createdAt ?? this.createdAt,
       lastModified: lastModified ?? this.lastModified,
     );
@@ -1061,6 +1209,12 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
     if (notificationsEnabled.present) {
       map['notifications_enabled'] = Variable<bool>(notificationsEnabled.value);
     }
+    if (morningReminderMin.present) {
+      map['morning_reminder_min'] = Variable<int>(morningReminderMin.value);
+    }
+    if (eveningReminderMin.present) {
+      map['evening_reminder_min'] = Variable<int>(eveningReminderMin.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1079,6 +1233,8 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
           ..write('journalAlignment: $journalAlignment, ')
           ..write('questsPerDay: $questsPerDay, ')
           ..write('notificationsEnabled: $notificationsEnabled, ')
+          ..write('morningReminderMin: $morningReminderMin, ')
+          ..write('eveningReminderMin: $eveningReminderMin, ')
           ..write('createdAt: $createdAt, ')
           ..write('lastModified: $lastModified')
           ..write(')'))
@@ -5014,6 +5170,7 @@ typedef $$AppStateTableCreateCompanionBuilder =
       Value<int> biomesCompleted,
       Value<QuestCategory?> pendingTreeCategory,
       Value<DateTime?> lastRerollDate,
+      Value<bool> welcomeShown,
       Value<DateTime> createdAt,
       Value<DateTime> lastModified,
     });
@@ -5025,6 +5182,7 @@ typedef $$AppStateTableUpdateCompanionBuilder =
       Value<int> biomesCompleted,
       Value<QuestCategory?> pendingTreeCategory,
       Value<DateTime?> lastRerollDate,
+      Value<bool> welcomeShown,
       Value<DateTime> createdAt,
       Value<DateTime> lastModified,
     });
@@ -5066,6 +5224,11 @@ class $$AppStateTableFilterComposer
 
   ColumnFilters<DateTime> get lastRerollDate => $composableBuilder(
     column: $table.lastRerollDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get welcomeShown => $composableBuilder(
+    column: $table.welcomeShown,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5119,6 +5282,11 @@ class $$AppStateTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get welcomeShown => $composableBuilder(
+    column: $table.welcomeShown,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -5165,6 +5333,11 @@ class $$AppStateTableAnnotationComposer
 
   GeneratedColumn<DateTime> get lastRerollDate => $composableBuilder(
     column: $table.lastRerollDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get welcomeShown => $composableBuilder(
+    column: $table.welcomeShown,
     builder: (column) => column,
   );
 
@@ -5215,6 +5388,7 @@ class $$AppStateTableTableManager
                 Value<QuestCategory?> pendingTreeCategory =
                     const Value.absent(),
                 Value<DateTime?> lastRerollDate = const Value.absent(),
+                Value<bool> welcomeShown = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> lastModified = const Value.absent(),
               }) => AppStateCompanion(
@@ -5224,6 +5398,7 @@ class $$AppStateTableTableManager
                 biomesCompleted: biomesCompleted,
                 pendingTreeCategory: pendingTreeCategory,
                 lastRerollDate: lastRerollDate,
+                welcomeShown: welcomeShown,
                 createdAt: createdAt,
                 lastModified: lastModified,
               ),
@@ -5236,6 +5411,7 @@ class $$AppStateTableTableManager
                 Value<QuestCategory?> pendingTreeCategory =
                     const Value.absent(),
                 Value<DateTime?> lastRerollDate = const Value.absent(),
+                Value<bool> welcomeShown = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> lastModified = const Value.absent(),
               }) => AppStateCompanion.insert(
@@ -5245,6 +5421,7 @@ class $$AppStateTableTableManager
                 biomesCompleted: biomesCompleted,
                 pendingTreeCategory: pendingTreeCategory,
                 lastRerollDate: lastRerollDate,
+                welcomeShown: welcomeShown,
                 createdAt: createdAt,
                 lastModified: lastModified,
               ),
@@ -5278,6 +5455,8 @@ typedef $$SettingsTableCreateCompanionBuilder =
       Value<JournalAlignment> journalAlignment,
       Value<int> questsPerDay,
       Value<bool> notificationsEnabled,
+      Value<int> morningReminderMin,
+      Value<int> eveningReminderMin,
       Value<DateTime> createdAt,
       Value<DateTime> lastModified,
     });
@@ -5289,6 +5468,8 @@ typedef $$SettingsTableUpdateCompanionBuilder =
       Value<JournalAlignment> journalAlignment,
       Value<int> questsPerDay,
       Value<bool> notificationsEnabled,
+      Value<int> morningReminderMin,
+      Value<int> eveningReminderMin,
       Value<DateTime> createdAt,
       Value<DateTime> lastModified,
     });
@@ -5331,6 +5512,16 @@ class $$SettingsTableFilterComposer
 
   ColumnFilters<bool> get notificationsEnabled => $composableBuilder(
     column: $table.notificationsEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get morningReminderMin => $composableBuilder(
+    column: $table.morningReminderMin,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get eveningReminderMin => $composableBuilder(
+    column: $table.eveningReminderMin,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5384,6 +5575,16 @@ class $$SettingsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get morningReminderMin => $composableBuilder(
+    column: $table.morningReminderMin,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get eveningReminderMin => $composableBuilder(
+    column: $table.eveningReminderMin,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -5434,6 +5635,16 @@ class $$SettingsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get morningReminderMin => $composableBuilder(
+    column: $table.morningReminderMin,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get eveningReminderMin => $composableBuilder(
+    column: $table.eveningReminderMin,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -5480,6 +5691,8 @@ class $$SettingsTableTableManager
                 Value<JournalAlignment> journalAlignment = const Value.absent(),
                 Value<int> questsPerDay = const Value.absent(),
                 Value<bool> notificationsEnabled = const Value.absent(),
+                Value<int> morningReminderMin = const Value.absent(),
+                Value<int> eveningReminderMin = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> lastModified = const Value.absent(),
               }) => SettingsCompanion(
@@ -5489,6 +5702,8 @@ class $$SettingsTableTableManager
                 journalAlignment: journalAlignment,
                 questsPerDay: questsPerDay,
                 notificationsEnabled: notificationsEnabled,
+                morningReminderMin: morningReminderMin,
+                eveningReminderMin: eveningReminderMin,
                 createdAt: createdAt,
                 lastModified: lastModified,
               ),
@@ -5500,6 +5715,8 @@ class $$SettingsTableTableManager
                 Value<JournalAlignment> journalAlignment = const Value.absent(),
                 Value<int> questsPerDay = const Value.absent(),
                 Value<bool> notificationsEnabled = const Value.absent(),
+                Value<int> morningReminderMin = const Value.absent(),
+                Value<int> eveningReminderMin = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> lastModified = const Value.absent(),
               }) => SettingsCompanion.insert(
@@ -5509,6 +5726,8 @@ class $$SettingsTableTableManager
                 journalAlignment: journalAlignment,
                 questsPerDay: questsPerDay,
                 notificationsEnabled: notificationsEnabled,
+                morningReminderMin: morningReminderMin,
+                eveningReminderMin: eveningReminderMin,
                 createdAt: createdAt,
                 lastModified: lastModified,
               ),

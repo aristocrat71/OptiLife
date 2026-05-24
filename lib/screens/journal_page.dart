@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart'; // StateProvider (Riverpod 3)
 
 import '../core/limits.dart';
 import '../data/database.dart';
@@ -17,6 +18,11 @@ import '../widgets/level_up_overlay.dart';
 import '../widgets/pop_tappable.dart';
 import '../widgets/warp_button.dart';
 import 'workshop_page.dart';
+
+/// Whether the habits strip is collapsed (hidden behind its title arrow).
+/// Lives outside the widgets so the journal editor can pop it back open when
+/// the entry is focused.
+final habitsCollapsedProvider = StateProvider<bool>((ref) => false);
 
 /// Journal + Habits (`04-journal-habits.md`). One combined screen: habit logging
 /// (+2⚡ each) lives **above** the day's journal entry. Today is editable; past
@@ -35,8 +41,12 @@ class JournalPage extends ConsumerWidget {
     final isFuture = ref.watch(isFutureProvider);
 
     return DayPager(
-      padding: const EdgeInsets.fromLTRB(
-          AppSpace.screenGutter, 184, AppSpace.screenGutter, 24),
+      // Reserve the keyboard's height at the bottom so the editable region ends
+      // at the keyboard's upper edge (the shell keeps resizeToAvoidBottomInset
+      // off, so we account for the inset here). Flutter then auto-scrolls the
+      // entry to keep the caret above the keyboard.
+      padding: EdgeInsets.fromLTRB(AppSpace.screenGutter, 184,
+          AppSpace.screenGutter, 24 + MediaQuery.of(context).viewInsets.bottom),
       children: [
         if (isFuture)
           Expanded(child: _futureEmpty(ref))
@@ -248,6 +258,7 @@ class _HabitsStrip extends ConsumerWidget {
     final logs =
         ref.watch(habitLogsForSelectedDateProvider).asData?.value ?? const [];
     final loggedLe = logs.fold<int>(0, (s, l) => s + l.leAwarded);
+    final collapsed = ref.watch(habitsCollapsedProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -255,9 +266,28 @@ class _HabitsStrip extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(readOnly ? "THAT DAY'S HABITS" : "TODAY'S HABITS",
-                style: AppType.label
-                    .copyWith(fontSize: 13, color: AppColors.textMuted)),
+            // Title + the collapse/expand arrow.
+            PopTappable(
+              onTap: () => ref.read(habitsCollapsedProvider.notifier).state =
+                  !collapsed,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('HABITS',
+                      style: AppType.label
+                          .copyWith(fontSize: 13, color: AppColors.textMuted)),
+                  const SizedBox(width: 3),
+                  AnimatedRotation(
+                    // Points up when open, down when collapsed.
+                    turns: collapsed ? 0 : 0.5,
+                    duration: AppMotion.pop,
+                    curve: Curves.easeInOut,
+                    child: Icon(Icons.keyboard_arrow_down_rounded,
+                        size: 20, color: AppColors.textMuted),
+                  ),
+                ],
+              ),
+            ),
             if (loggedLe > 0)
               Row(
                 mainAxisSize: MainAxisSize.min,
@@ -274,34 +304,68 @@ class _HabitsStrip extends ConsumerWidget {
               ),
           ],
         ),
-        const SizedBox(height: 10),
-        if (habits.isEmpty)
-          _noHabitsPrompt(context)
-        else
-          SizedBox(
-            height: 96,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              itemCount: habits.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 12),
-              itemBuilder: (_, i) {
-                final h = habits[i];
-                HabitLog? log;
-                for (final l in logs) {
-                  if (l.habitId == h.id) {
-                    log = l;
-                    break;
-                  }
-                }
-                return _HabitChip(habit: h, log: log, readOnly: readOnly);
-              },
-            ),
-          ),
+        // The list drops down / folds up under the title.
+        AnimatedSize(
+          duration: AppMotion.pop,
+          curve: Curves.easeInOut,
+          alignment: Alignment.topCenter,
+          child: collapsed
+              ? const SizedBox(width: double.infinity)
+              : Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: habits.isEmpty
+                      ? _noHabitsPrompt(context)
+                      : SizedBox(
+                          height: 96,
+                          child: _fadeEdgesH(
+                            ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              physics: const BouncingScrollPhysics(),
+                              // Inset so the first/last chips clear the edge
+                              // fades at rest.
+                              padding: const EdgeInsets.fromLTRB(2, 2, 2, 2),
+                              itemCount: habits.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(width: 12),
+                              itemBuilder: (_, i) {
+                                final h = habits[i];
+                                HabitLog? log;
+                                for (final l in logs) {
+                                  if (l.habitId == h.id) {
+                                    log = l;
+                                    break;
+                                  }
+                                }
+                                return _HabitChip(
+                                    habit: h, log: log, readOnly: readOnly);
+                              },
+                            ),
+                          ),
+                        ),
+                ),
+        ),
       ],
     );
   }
+
+  /// Softly fades the left & right edges of the habits row to transparent so
+  /// chips melt into the background instead of being hard-clipped — mirrors the
+  /// vertical fade on the Side Quests box, but horizontal.
+  Widget _fadeEdgesH(Widget child) => ShaderMask(
+        blendMode: BlendMode.dstIn,
+        shaderCallback: (rect) => const LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            Colors.transparent,
+            Colors.white,
+            Colors.white,
+            Colors.transparent,
+          ],
+          stops: [0.0, 0.04, 0.96, 1.0],
+        ).createShader(rect),
+        child: child,
+      );
 
   Widget _noHabitsPrompt(BuildContext context) {
     return Container(
@@ -497,6 +561,11 @@ class _JournalSection extends ConsumerWidget {
                         onChanged: (text) => ref
                             .read(databaseProvider)
                             .upsertJournal(date, text),
+                        // Focusing the entry folds the habits strip away to
+                        // make room for typing.
+                        onFocus: () => ref
+                            .read(habitsCollapsedProvider.notifier)
+                            .state = true,
                       ),
               ),
             ],
@@ -531,11 +600,13 @@ class _JournalEditor extends StatefulWidget {
     required this.font,
     required this.textAlign,
     required this.onChanged,
+    required this.onFocus,
   });
   final String initialBody;
   final JournalFont font;
   final TextAlign textAlign;
   final ValueChanged<String> onChanged;
+  final VoidCallback onFocus;
 
   @override
   State<_JournalEditor> createState() => _JournalEditorState();
@@ -544,11 +615,17 @@ class _JournalEditor extends StatefulWidget {
 class _JournalEditorState extends State<_JournalEditor> {
   late final TextEditingController _controller =
       TextEditingController(text: widget.initialBody);
+  late final FocusNode _focusNode = FocusNode()..addListener(_onFocusChange);
   Timer? _debounce;
+
+  void _onFocusChange() {
+    if (_focusNode.hasFocus) widget.onFocus();
+  }
 
   @override
   void dispose() {
     _debounce?.cancel();
+    _focusNode.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -566,6 +643,7 @@ class _JournalEditorState extends State<_JournalEditor> {
       children: [
         TextField(
           controller: _controller,
+          focusNode: _focusNode,
           onChanged: _onChanged,
           maxLines: null,
           expands: true,

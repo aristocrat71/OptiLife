@@ -21,6 +21,8 @@ class AppState extends Table {
   TextColumn get pendingTreeCategory =>
       textEnum<QuestCategory>().nullable()();
   DateTimeColumn get lastRerollDate => dateTime().nullable()();
+  // True once the first-launch welcome/guide prompt has been shown.
+  BoolColumn get welcomeShown => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().clientDefault(DateTime.now)();
   DateTimeColumn get lastModified => dateTime().clientDefault(DateTime.now)();
 
@@ -41,6 +43,12 @@ class Settings extends Table {
   IntColumn get questsPerDay => integer().withDefault(const Constant(3))();
   BoolColumn get notificationsEnabled =>
       boolean().withDefault(const Constant(false))();
+  // Reminder times as minutes-since-midnight. Morning = quests nudge (09:00),
+  // evening = journal nudge (20:00).
+  IntColumn get morningReminderMin =>
+      integer().withDefault(const Constant(9 * 60))();
+  IntColumn get eveningReminderMin =>
+      integer().withDefault(const Constant(20 * 60))();
   DateTimeColumn get createdAt => dateTime().clientDefault(DateTime.now)();
   DateTimeColumn get lastModified => dateTime().clientDefault(DateTime.now)();
 

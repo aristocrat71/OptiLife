@@ -44,6 +44,12 @@ dependencies:
   flame: ^1.37.0
   flame_svg: ^1.12.1
   gal: ^2.3.2
+  pdf: ^3.11.0 # journal export → PDF
+  printing: ^5.13.0 # share/save the generated PDF
+  flutter_local_notifications: ^18.0.1 # daily reminders
+  timezone: ^0.9.4 # zoned scheduling for reminders
+  flutter_timezone: ^3.0.1 # device IANA timezone for tz.local
+  url_launcher: ^6.3.0 # open the online guide
 
 dev_dependencies:
   flutter_test:
@@ -75,6 +81,7 @@ flutter:
     - assets/icons/
     - assets/illustrations/
     - assets/trees/
+    - assets/icon/app_icon.svg
 
   fonts:
     - family: Fredoka

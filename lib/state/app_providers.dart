@@ -82,6 +82,16 @@ final rolledQuestsForSelectedDateProvider =
 final treesProvider = StreamProvider<List<TreeRow>>(
     (ref) => ref.watch(databaseProvider).watchTrees());
 
+// ── analytics history (whole-table; aggregated in the Analytics screen) ──
+final allQuestCompletionsProvider = StreamProvider<List<QuestCompletion>>(
+    (ref) => ref.watch(databaseProvider).watchAllQuestCompletions());
+
+final allHabitLogsProvider = StreamProvider<List<HabitLog>>(
+    (ref) => ref.watch(databaseProvider).watchAllHabitLogs());
+
+final allRollsProvider = StreamProvider<List<DailyQuestRoll>>(
+    (ref) => ref.watch(databaseProvider).watchAllRolls());
+
 /// True when the biome has hit its tree cap and awaits a reboot.
 final isBiomeFullProvider = Provider<bool>((ref) {
   final trees = ref.watch(treesProvider).asData?.value;

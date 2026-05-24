@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
+import '../data/database.dart';
+import '../services/notifications.dart';
 import '../state/app_providers.dart';
 import '../theme/theme.dart';
+import '../widgets/journal_export.dart';
 import '../widgets/journal_style_sheet.dart';
 import '../widgets/pop_tappable.dart';
 import '../widgets/shell_controls.dart';
+import '../widgets/welcome_guide.dart';
 import 'workshop_page.dart';
 
 /// Settings (`10-secondary-screens.md §3`). Grouped cards; every change writes
@@ -17,6 +22,7 @@ class SettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider).asData?.value;
+    final app = ref.watch(appStateProvider).asData?.value;
     final db = ref.read(databaseProvider);
 
     return Scaffold(
@@ -102,15 +108,48 @@ class SettingsPage extends ConsumerWidget {
                         _card([
                           _ToggleRow(
                             label: 'Notifications',
-                            soon: true,
                             value: settings.notificationsEnabled,
-                            onChanged: null,
+                            onChanged: (v) =>
+                                _onToggleNotifications(context, db, settings, v),
                           ),
+                          if (settings.notificationsEnabled) ...[
+                            const _Divider(),
+                            _NavRow(
+                              label: 'Morning reminder',
+                              trailing: _timeTrailing(context,
+                                  settings.morningReminderMin),
+                              onTap: () => _pickReminderTime(
+                                  context, db, settings, morning: true),
+                            ),
+                            const _Divider(),
+                            _NavRow(
+                              label: 'Evening reminder',
+                              trailing: _timeTrailing(context,
+                                  settings.eveningReminderMin),
+                              onTap: () => _pickReminderTime(
+                                  context, db, settings, morning: false),
+                            ),
+                          ],
                           const _Divider(),
                           _NavRow(
                             label: 'Export journal',
-                            trailing: _soonChip(),
-                            onTap: null,
+                            trailing: const Icon(Icons.chevron_right_rounded,
+                                color: AppColors.mutedInk),
+                            onTap: () => showJournalExportDialog(
+                              context,
+                              db: db,
+                              font: settings.journalFont,
+                              alignment: settings.journalAlignment,
+                              accountCreated:
+                                  app?.createdAt ?? DateTime.now(),
+                            ),
+                          ),
+                          const _Divider(),
+                          _NavRow(
+                            label: 'How to use OptiLife',
+                            trailing: const Icon(Icons.open_in_new_rounded,
+                                size: 20, color: AppColors.mutedInk),
+                            onTap: () => openGuide(context),
                           ),
                           const _Divider(),
                           _NavRow(
@@ -142,16 +181,6 @@ class SettingsPage extends ConsumerWidget {
         child: Column(children: children),
       );
 
-  static Widget _soonChip() => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceSunk,
-          borderRadius: AppRadii.r(AppRadii.pill),
-        ),
-        child: Text('soon',
-            style: AppType.caption.copyWith(color: AppColors.mutedInk)),
-      );
-
   static void _showAbout(BuildContext context) {
     showGeneralDialog<void>(
       context: context,
@@ -170,8 +199,9 @@ class SettingsPage extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.bolt, size: 40, color: AppColors.energy),
-                const SizedBox(height: 8),
+                SvgPicture.asset(AppAssets.appIconMaster,
+                    width: 56, height: 56),
+                const SizedBox(height: 10),
                 Text('OptiLife', style: AppType.display.copyWith(fontSize: 26)),
                 const SizedBox(height: 4),
                 Text('Version 1.0.0',
@@ -181,6 +211,12 @@ class SettingsPage extends ConsumerWidget {
                 Text('Level up your life, one quest at a time.',
                     textAlign: TextAlign.center,
                     style: AppType.body.copyWith(color: AppColors.textMuted)),
+                const SizedBox(height: 14),
+                Text('Dreamy · Projekt Dreamscape',
+                    textAlign: TextAlign.center,
+                    style: AppType.caption.copyWith(
+                        color: AppColors.textMuted,
+                        fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -198,6 +234,57 @@ class SettingsPage extends ConsumerWidget {
   }
 }
 
+// ── Notifications wiring (top-level helpers; Settings is stateless) ──
+
+Widget _timeTrailing(BuildContext context, int minutes) => Text(
+      TimeOfDay(hour: minutes ~/ 60, minute: minutes % 60).format(context),
+      style: AppType.body.copyWith(fontSize: 15, color: AppColors.popPurple),
+    );
+
+Future<void> _onToggleNotifications(
+    BuildContext context, AppDatabase db, SettingsRow s, bool enable) async {
+  final messenger = ScaffoldMessenger.of(context);
+  if (enable) {
+    final granted = await Reminders.requestPermission();
+    if (!granted) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(
+            content: Text(
+                'Allow notifications in system settings to enable reminders.')));
+      return; // leave the toggle off
+    }
+  }
+  await db.setNotificationsEnabled(enable);
+  await Reminders.reschedule(
+    enabled: enable,
+    morningMin: s.morningReminderMin,
+    eveningMin: s.eveningReminderMin,
+  );
+}
+
+Future<void> _pickReminderTime(
+    BuildContext context, AppDatabase db, SettingsRow s,
+    {required bool morning}) async {
+  final current = morning ? s.morningReminderMin : s.eveningReminderMin;
+  final picked = await showTimePicker(
+    context: context,
+    initialTime: TimeOfDay(hour: current ~/ 60, minute: current % 60),
+  );
+  if (picked == null) return;
+  final min = picked.hour * 60 + picked.minute;
+  if (morning) {
+    await db.setMorningReminderMin(min);
+  } else {
+    await db.setEveningReminderMin(min);
+  }
+  await Reminders.reschedule(
+    enabled: s.notificationsEnabled,
+    morningMin: morning ? min : s.morningReminderMin,
+    eveningMin: morning ? s.eveningReminderMin : min,
+  );
+}
+
 class _Divider extends StatelessWidget {
   const _Divider();
   @override
@@ -210,12 +297,10 @@ class _ToggleRow extends StatelessWidget {
     required this.label,
     required this.value,
     required this.onChanged,
-    this.soon = false,
   });
   final String label;
   final bool value;
   final ValueChanged<bool>? onChanged;
-  final bool soon;
 
   @override
   Widget build(BuildContext context) {
@@ -224,10 +309,6 @@ class _ToggleRow extends StatelessWidget {
       child: Row(
         children: [
           Text(label, style: AppType.body.copyWith(fontSize: 16)),
-          if (soon) ...[
-            const SizedBox(width: 8),
-            SettingsPage._soonChip(),
-          ],
           const Spacer(),
           _PopSwitch(value: value, onChanged: onChanged),
         ],

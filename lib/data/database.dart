@@ -28,25 +28,13 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 1;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) async {
           await m.createAll();
           await _seed();
-        },
-        onUpgrade: (m, from, to) async {
-          if (from < 3) {
-            // Reset quests/day to the default 3 and clear today's cached roll
-            // so it re-rolls with the right count. (Bridges the temporary
-            // 6-quest experiment; safe to squash before release.)
-            await (update(settings)..where((t) => t.id.equals(1)))
-                .write(const SettingsCompanion(questsPerDay: Value(3)));
-            final today = dateOnly(DateTime.now());
-            await (delete(dailyQuestRolls)..where((t) => t.date.equals(today)))
-                .go();
-          }
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
@@ -56,10 +44,7 @@ class AppDatabase extends _$AppDatabase {
   /// First-launch seeding (Data Models §9): singleton rows + preset quests.
   Future<void> _seed() async {
     await into(appState).insert(const AppStateCompanion(id: Value(1)));
-    // TEMP (testing only — revert to default): seed 10 quests/day to stress-test
-    // the biome (faster level-ups). Default is 3.
-    await into(settings).insert(
-        const SettingsCompanion(id: Value(1), questsPerDay: Value(10)));
+    await into(settings).insert(const SettingsCompanion(id: Value(1)));
     await batch((b) {
       b.insertAll(
         quests,
@@ -92,6 +77,16 @@ class AppDatabase extends _$AppDatabase {
       (select(journalEntries)..where((t) => t.date.equals(day)))
           .watchSingleOrNull();
 
+  /// Non-empty journal entries within an inclusive date range, oldest first —
+  /// the source for the PDF export.
+  Future<List<JournalEntry>> journalEntriesInRange(
+          DateTime from, DateTime to) =>
+      (select(journalEntries)
+            ..where((t) => t.date.isBetweenValues(from, to))
+            ..where((t) => t.body.trim().length.isBiggerThanValue(0))
+            ..orderBy([(t) => OrderingTerm(expression: t.date)]))
+          .get();
+
   Stream<List<HabitLog>> watchHabitLogsForDate(DateTime day) =>
       (select(habitLogs)..where((t) => t.date.equals(day))).watch();
 
@@ -119,6 +114,20 @@ class AppDatabase extends _$AppDatabase {
 
   Stream<List<TreeRow>> watchTrees() => (select(trees)
         ..orderBy([(t) => OrderingTerm(expression: t.plantedAt)]))
+      .watch();
+
+  // ── analytics history (whole-table watches; aggregated client-side) ──
+  Stream<List<QuestCompletion>> watchAllQuestCompletions() =>
+      (select(questCompletions)
+            ..orderBy([(t) => OrderingTerm(expression: t.date)]))
+          .watch();
+
+  Stream<List<HabitLog>> watchAllHabitLogs() => (select(habitLogs)
+        ..orderBy([(t) => OrderingTerm(expression: t.date)]))
+      .watch();
+
+  Stream<List<DailyQuestRoll>> watchAllRolls() => (select(dailyQuestRolls)
+        ..orderBy([(t) => OrderingTerm(expression: t.date)]))
       .watch();
 
   /// Workshop quest list, **filtered in SQL** (not client-side): optional title/
@@ -239,6 +248,17 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> setNotificationsEnabled(bool v) => _patchSettings(
       SettingsCompanion(notificationsEnabled: Value(v)));
+
+  Future<void> setWelcomeShown(bool v) =>
+      (update(appState)..where((t) => t.id.equals(1))).write(
+          AppStateCompanion(
+              welcomeShown: Value(v), lastModified: Value(DateTime.now())));
+
+  Future<void> setMorningReminderMin(int min) => _patchSettings(
+      SettingsCompanion(morningReminderMin: Value(min.clamp(0, 1439))));
+
+  Future<void> setEveningReminderMin(int min) => _patchSettings(
+      SettingsCompanion(eveningReminderMin: Value(min.clamp(0, 1439))));
 
   Future<void> _patchSettings(SettingsCompanion patch) =>
       (update(settings)..where((t) => t.id.equals(1)))
