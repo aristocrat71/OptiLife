@@ -10,6 +10,7 @@ import '../widgets/journal_export.dart';
 import '../widgets/journal_style_sheet.dart';
 import '../widgets/pop_tappable.dart';
 import '../widgets/shell_controls.dart';
+import '../widgets/welcome_guide.dart';
 import 'workshop_page.dart';
 
 /// Settings (`10-secondary-screens.md §3`). Grouped cards; every change writes
@@ -142,6 +143,13 @@ class SettingsPage extends ConsumerWidget {
                               accountCreated:
                                   app?.createdAt ?? DateTime.now(),
                             ),
+                          ),
+                          const _Divider(),
+                          _NavRow(
+                            label: 'How to use OptiLife',
+                            trailing: const Icon(Icons.open_in_new_rounded,
+                                size: 20, color: AppColors.mutedInk),
+                            onTap: () => openGuide(context),
                           ),
                           const _Divider(),
                           _NavRow(

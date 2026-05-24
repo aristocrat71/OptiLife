@@ -8,6 +8,7 @@ import '../theme/theme.dart';
 import '../widgets/pop_calendar.dart';
 import '../widgets/radial_menu.dart';
 import '../widgets/shell_controls.dart';
+import '../widgets/welcome_guide.dart';
 import 'biome/biome_page.dart';
 import 'analytics_page.dart';
 import 'journal_page.dart';
@@ -26,6 +27,23 @@ class AppShell extends ConsumerStatefulWidget {
 class _AppShellState extends ConsumerState<AppShell> {
   final _controller = PageController(initialPage: 1);
   int _index = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowWelcome());
+  }
+
+  /// First launch after install: show the guide prompt once, then mark it seen
+  /// (so it never reappears, whether or not they view the guide).
+  Future<void> _maybeShowWelcome() async {
+    final db = ref.read(databaseProvider);
+    final app = await db.watchAppState().first;
+    if (!mounted || app.welcomeShown) return;
+    await db.setWelcomeShown(true);
+    if (!mounted) return;
+    await showWelcomeGuide(context);
+  }
 
   @override
   void dispose() {

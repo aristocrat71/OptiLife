@@ -79,6 +79,21 @@ class $AppStateTable extends AppState
         type: DriftSqlType.dateTime,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _welcomeShownMeta = const VerificationMeta(
+    'welcomeShown',
+  );
+  @override
+  late final GeneratedColumn<bool> welcomeShown = GeneratedColumn<bool>(
+    'welcome_shown',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("welcome_shown" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -111,6 +126,7 @@ class $AppStateTable extends AppState
     biomesCompleted,
     pendingTreeCategory,
     lastRerollDate,
+    welcomeShown,
     createdAt,
     lastModified,
   ];
@@ -159,6 +175,15 @@ class $AppStateTable extends AppState
         lastRerollDate.isAcceptableOrUnknown(
           data['last_reroll_date']!,
           _lastRerollDateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('welcome_shown')) {
+      context.handle(
+        _welcomeShownMeta,
+        welcomeShown.isAcceptableOrUnknown(
+          data['welcome_shown']!,
+          _welcomeShownMeta,
         ),
       );
     }
@@ -213,6 +238,10 @@ class $AppStateTable extends AppState
         DriftSqlType.dateTime,
         data['${effectivePrefix}last_reroll_date'],
       ),
+      welcomeShown: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}welcome_shown'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -246,6 +275,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
   final int biomesCompleted;
   final QuestCategory? pendingTreeCategory;
   final DateTime? lastRerollDate;
+  final bool welcomeShown;
   final DateTime createdAt;
   final DateTime lastModified;
   const AppStateRow({
@@ -255,6 +285,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
     required this.biomesCompleted,
     this.pendingTreeCategory,
     this.lastRerollDate,
+    required this.welcomeShown,
     required this.createdAt,
     required this.lastModified,
   });
@@ -275,6 +306,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
     if (!nullToAbsent || lastRerollDate != null) {
       map['last_reroll_date'] = Variable<DateTime>(lastRerollDate);
     }
+    map['welcome_shown'] = Variable<bool>(welcomeShown);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['last_modified'] = Variable<DateTime>(lastModified);
     return map;
@@ -292,6 +324,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
       lastRerollDate: lastRerollDate == null && nullToAbsent
           ? const Value.absent()
           : Value(lastRerollDate),
+      welcomeShown: Value(welcomeShown),
       createdAt: Value(createdAt),
       lastModified: Value(lastModified),
     );
@@ -312,6 +345,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
       pendingTreeCategory: $AppStateTable.$converterpendingTreeCategoryn
           .fromJson(serializer.fromJson<String?>(json['pendingTreeCategory'])),
       lastRerollDate: serializer.fromJson<DateTime?>(json['lastRerollDate']),
+      welcomeShown: serializer.fromJson<bool>(json['welcomeShown']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       lastModified: serializer.fromJson<DateTime>(json['lastModified']),
     );
@@ -332,6 +366,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
         ),
       ),
       'lastRerollDate': serializer.toJson<DateTime?>(lastRerollDate),
+      'welcomeShown': serializer.toJson<bool>(welcomeShown),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'lastModified': serializer.toJson<DateTime>(lastModified),
     };
@@ -344,6 +379,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
     int? biomesCompleted,
     Value<QuestCategory?> pendingTreeCategory = const Value.absent(),
     Value<DateTime?> lastRerollDate = const Value.absent(),
+    bool? welcomeShown,
     DateTime? createdAt,
     DateTime? lastModified,
   }) => AppStateRow(
@@ -357,6 +393,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
     lastRerollDate: lastRerollDate.present
         ? lastRerollDate.value
         : this.lastRerollDate,
+    welcomeShown: welcomeShown ?? this.welcomeShown,
     createdAt: createdAt ?? this.createdAt,
     lastModified: lastModified ?? this.lastModified,
   );
@@ -378,6 +415,9 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
       lastRerollDate: data.lastRerollDate.present
           ? data.lastRerollDate.value
           : this.lastRerollDate,
+      welcomeShown: data.welcomeShown.present
+          ? data.welcomeShown.value
+          : this.welcomeShown,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       lastModified: data.lastModified.present
           ? data.lastModified.value
@@ -394,6 +434,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
           ..write('biomesCompleted: $biomesCompleted, ')
           ..write('pendingTreeCategory: $pendingTreeCategory, ')
           ..write('lastRerollDate: $lastRerollDate, ')
+          ..write('welcomeShown: $welcomeShown, ')
           ..write('createdAt: $createdAt, ')
           ..write('lastModified: $lastModified')
           ..write(')'))
@@ -408,6 +449,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
     biomesCompleted,
     pendingTreeCategory,
     lastRerollDate,
+    welcomeShown,
     createdAt,
     lastModified,
   );
@@ -421,6 +463,7 @@ class AppStateRow extends DataClass implements Insertable<AppStateRow> {
           other.biomesCompleted == this.biomesCompleted &&
           other.pendingTreeCategory == this.pendingTreeCategory &&
           other.lastRerollDate == this.lastRerollDate &&
+          other.welcomeShown == this.welcomeShown &&
           other.createdAt == this.createdAt &&
           other.lastModified == this.lastModified);
 }
@@ -432,6 +475,7 @@ class AppStateCompanion extends UpdateCompanion<AppStateRow> {
   final Value<int> biomesCompleted;
   final Value<QuestCategory?> pendingTreeCategory;
   final Value<DateTime?> lastRerollDate;
+  final Value<bool> welcomeShown;
   final Value<DateTime> createdAt;
   final Value<DateTime> lastModified;
   const AppStateCompanion({
@@ -441,6 +485,7 @@ class AppStateCompanion extends UpdateCompanion<AppStateRow> {
     this.biomesCompleted = const Value.absent(),
     this.pendingTreeCategory = const Value.absent(),
     this.lastRerollDate = const Value.absent(),
+    this.welcomeShown = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.lastModified = const Value.absent(),
   });
@@ -451,6 +496,7 @@ class AppStateCompanion extends UpdateCompanion<AppStateRow> {
     this.biomesCompleted = const Value.absent(),
     this.pendingTreeCategory = const Value.absent(),
     this.lastRerollDate = const Value.absent(),
+    this.welcomeShown = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.lastModified = const Value.absent(),
   });
@@ -461,6 +507,7 @@ class AppStateCompanion extends UpdateCompanion<AppStateRow> {
     Expression<int>? biomesCompleted,
     Expression<String>? pendingTreeCategory,
     Expression<DateTime>? lastRerollDate,
+    Expression<bool>? welcomeShown,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? lastModified,
   }) {
@@ -473,6 +520,7 @@ class AppStateCompanion extends UpdateCompanion<AppStateRow> {
       if (pendingTreeCategory != null)
         'pending_tree_category': pendingTreeCategory,
       if (lastRerollDate != null) 'last_reroll_date': lastRerollDate,
+      if (welcomeShown != null) 'welcome_shown': welcomeShown,
       if (createdAt != null) 'created_at': createdAt,
       if (lastModified != null) 'last_modified': lastModified,
     });
@@ -485,6 +533,7 @@ class AppStateCompanion extends UpdateCompanion<AppStateRow> {
     Value<int>? biomesCompleted,
     Value<QuestCategory?>? pendingTreeCategory,
     Value<DateTime?>? lastRerollDate,
+    Value<bool>? welcomeShown,
     Value<DateTime>? createdAt,
     Value<DateTime>? lastModified,
   }) {
@@ -496,6 +545,7 @@ class AppStateCompanion extends UpdateCompanion<AppStateRow> {
       biomesCompleted: biomesCompleted ?? this.biomesCompleted,
       pendingTreeCategory: pendingTreeCategory ?? this.pendingTreeCategory,
       lastRerollDate: lastRerollDate ?? this.lastRerollDate,
+      welcomeShown: welcomeShown ?? this.welcomeShown,
       createdAt: createdAt ?? this.createdAt,
       lastModified: lastModified ?? this.lastModified,
     );
@@ -528,6 +578,9 @@ class AppStateCompanion extends UpdateCompanion<AppStateRow> {
     if (lastRerollDate.present) {
       map['last_reroll_date'] = Variable<DateTime>(lastRerollDate.value);
     }
+    if (welcomeShown.present) {
+      map['welcome_shown'] = Variable<bool>(welcomeShown.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -546,6 +599,7 @@ class AppStateCompanion extends UpdateCompanion<AppStateRow> {
           ..write('biomesCompleted: $biomesCompleted, ')
           ..write('pendingTreeCategory: $pendingTreeCategory, ')
           ..write('lastRerollDate: $lastRerollDate, ')
+          ..write('welcomeShown: $welcomeShown, ')
           ..write('createdAt: $createdAt, ')
           ..write('lastModified: $lastModified')
           ..write(')'))
@@ -5116,6 +5170,7 @@ typedef $$AppStateTableCreateCompanionBuilder =
       Value<int> biomesCompleted,
       Value<QuestCategory?> pendingTreeCategory,
       Value<DateTime?> lastRerollDate,
+      Value<bool> welcomeShown,
       Value<DateTime> createdAt,
       Value<DateTime> lastModified,
     });
@@ -5127,6 +5182,7 @@ typedef $$AppStateTableUpdateCompanionBuilder =
       Value<int> biomesCompleted,
       Value<QuestCategory?> pendingTreeCategory,
       Value<DateTime?> lastRerollDate,
+      Value<bool> welcomeShown,
       Value<DateTime> createdAt,
       Value<DateTime> lastModified,
     });
@@ -5168,6 +5224,11 @@ class $$AppStateTableFilterComposer
 
   ColumnFilters<DateTime> get lastRerollDate => $composableBuilder(
     column: $table.lastRerollDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get welcomeShown => $composableBuilder(
+    column: $table.welcomeShown,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5221,6 +5282,11 @@ class $$AppStateTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get welcomeShown => $composableBuilder(
+    column: $table.welcomeShown,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -5267,6 +5333,11 @@ class $$AppStateTableAnnotationComposer
 
   GeneratedColumn<DateTime> get lastRerollDate => $composableBuilder(
     column: $table.lastRerollDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get welcomeShown => $composableBuilder(
+    column: $table.welcomeShown,
     builder: (column) => column,
   );
 
@@ -5317,6 +5388,7 @@ class $$AppStateTableTableManager
                 Value<QuestCategory?> pendingTreeCategory =
                     const Value.absent(),
                 Value<DateTime?> lastRerollDate = const Value.absent(),
+                Value<bool> welcomeShown = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> lastModified = const Value.absent(),
               }) => AppStateCompanion(
@@ -5326,6 +5398,7 @@ class $$AppStateTableTableManager
                 biomesCompleted: biomesCompleted,
                 pendingTreeCategory: pendingTreeCategory,
                 lastRerollDate: lastRerollDate,
+                welcomeShown: welcomeShown,
                 createdAt: createdAt,
                 lastModified: lastModified,
               ),
@@ -5338,6 +5411,7 @@ class $$AppStateTableTableManager
                 Value<QuestCategory?> pendingTreeCategory =
                     const Value.absent(),
                 Value<DateTime?> lastRerollDate = const Value.absent(),
+                Value<bool> welcomeShown = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> lastModified = const Value.absent(),
               }) => AppStateCompanion.insert(
@@ -5347,6 +5421,7 @@ class $$AppStateTableTableManager
                 biomesCompleted: biomesCompleted,
                 pendingTreeCategory: pendingTreeCategory,
                 lastRerollDate: lastRerollDate,
+                welcomeShown: welcomeShown,
                 createdAt: createdAt,
                 lastModified: lastModified,
               ),
