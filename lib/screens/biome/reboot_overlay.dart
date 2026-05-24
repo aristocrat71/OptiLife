@@ -128,6 +128,10 @@ class _DimensionalTravelState extends State<_DimensionalTravel>
     duration: AppMotion.travel,
   )..forward();
 
+  // The streak field is generated once (stable seed) so the same stars stream
+  // outward every frame instead of flickering to new random ones.
+  late final List<_Streak> _streaks = _buildStreaks();
+
   @override
   void initState() {
     super.initState();
@@ -148,34 +152,65 @@ class _DimensionalTravelState extends State<_DimensionalTravel>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _c,
-      builder: (_, _) =>
-          CustomPaint(size: Size.infinite, painter: _TunnelPainter(_c.value)),
+      builder: (_, _) => CustomPaint(
+        size: Size.infinite,
+        painter: _HyperdrivePainter(_c.value, _streaks),
+      ),
     );
   }
 }
 
-/// Concentric gradient rings rushing out from centre with a swirl rotation —
-/// reads as zooming through a tunnel. Envelope fades in, peaks, fades out so
-/// the (now empty) world is revealed underneath at the end.
-class _TunnelPainter extends CustomPainter {
-  _TunnelPainter(this.t);
-  final double t; // 0..1 linear drive.
+/// One light streak: a fixed bearing from centre, its own speed + phase so the
+/// field doesn't pulse in lockstep, plus a colour and base thickness.
+class _Streak {
+  const _Streak(this.angle, this.offset, this.speed, this.color, this.width);
+  final double angle; // radians, fixed bearing from centre
+  final double offset; // 0..1 phase so streaks stagger
+  final double speed; // per-streak rate multiplier
+  final Color color;
+  final double width;
+}
 
-  // Hyperdrive palette: white star-light → electric cyan → hyperblue → indigo.
+/// Hyperdrive palette — mostly cool star-light (white / cyan / blue / teal)
+/// with a few warm + green accents thrown in, weighted by repetition.
+const _streakPalette = <Color>[
+  Color(0xFFFFFFFF), Color(0xFFFFFFFF), Color(0xFFFFFFFF), // white star-light
+  Color(0xFF7DF9FF), Color(0xFF7DF9FF), Color(0xFF7DF9FF), // electric cyan
+  Color(0xFF3A86FF), Color(0xFF3A86FF), Color(0xFF3A86FF), // hyperblue
+  Color(0xFF2EE6A8), Color(0xFF2EE6A8), // teal-green
+  Color(0xFF6C5CE7), // indigo
+  Color(0xFF6EF26E), // lime accent
+  Color(0xFFFF5A5F), // coral-red accent
+  Color(0xFFFF4D9D), // pink accent
+];
+
+List<_Streak> _buildStreaks() {
+  final rnd = math.Random(7);
+  return List.generate(180, (_) {
+    final angle = rnd.nextDouble() * 2 * math.pi;
+    final offset = rnd.nextDouble();
+    final speed = 0.7 + rnd.nextDouble() * 0.9;
+    final color = _streakPalette[rnd.nextInt(_streakPalette.length)];
+    final width = 1.2 + rnd.nextDouble() * 2.6;
+    return _Streak(angle, offset, speed, color, width);
+  });
+}
+
+/// Light streaks rushing out from a white-hot centre — a starfield punched into
+/// hyperspace. Streaks accelerate, lengthen and brighten as they fly to the
+/// edge. A sine envelope fades the whole field in, holds, then out, so the
+/// (now empty) world is revealed underneath at the end.
+class _HyperdrivePainter extends CustomPainter {
+  _HyperdrivePainter(this.t, this.streaks);
+  final double t; // 0..1 linear drive.
+  final List<_Streak> streaks;
+
   static const _space = Color(0xFF05071A);
-  static const _colors = [
-    Color(0xFFFFFFFF),
-    Color(0xFF7DF9FF),
-    Color(0xFF3A86FF),
-    Color(0xFF6C5CE7),
-  ];
 
   @override
   void paint(Canvas canvas, Size size) {
-    // The swirl/zoom accelerates — slow at first, rushing by the end.
+    // Acceleration: slow at first, rushing by the end.
     final motion = Curves.easeInCubic.transform(t);
-    // Cover-then-reveal is timed on the linear drive so it stays opaque while
-    // the world is wiped behind it (mid-animation), regardless of the easing.
     final envelope = math.sin(t * math.pi).clamp(0.0, 1.0);
     if (envelope <= 0) return;
 
@@ -184,35 +219,59 @@ class _TunnelPainter extends CustomPainter {
         Paint()..color = _space.withValues(alpha: envelope));
 
     final center = Offset(size.width / 2, size.height / 2);
-    final maxR = size.longestSide * 0.75;
+    final maxR = size.longestSide * 0.72;
 
     canvas.save();
     canvas.translate(center.dx, center.dy);
-    canvas.rotate(motion * math.pi * 1.5); // swirl
-    canvas.translate(-center.dx, -center.dy);
+    canvas.rotate(motion * 0.5); // a gentle swirl, not a full spin
+    // Additive blending so overlapping streaks glow and pile into white light
+    // at the core — the luminous hyperspace look.
+    final paint = Paint()
+      ..blendMode = BlendMode.plus
+      ..strokeCap = StrokeCap.round;
 
-    const rings = 14;
-    for (var i = 0; i < rings; i++) {
-      // Each ring rushes outward; staggered so they form a moving tunnel.
-      final phase = (motion * 2 + i / rings) % 1.0;
-      final radius = maxR * phase;
-      if (radius <= 0) continue;
-      final color = _colors[i % _colors.length];
-      final alpha = envelope * (1 - phase) * 0.9;
-      final paint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 26 * (1 - phase) + 6
-        ..color = color.withValues(alpha: alpha.clamp(0.0, 1.0));
-      canvas.drawCircle(center, radius, paint);
+    for (final s in streaks) {
+      // Looping phase: each streak repeatedly flies out from the centre.
+      final p = (motion * 2.3 * s.speed + s.offset) % 1.0;
+      final lead = maxR * math.pow(p, 1.7).toDouble();
+      if (lead <= 1) continue;
+      // Streaks are short near the centre, long (motion-blurred) near the edge.
+      final len = maxR * (0.03 + 0.30 * p);
+      final trail = (lead - len).clamp(0.0, lead);
+      final dir = Offset(math.cos(s.angle), math.sin(s.angle));
+
+      // Dim at the centre, bright toward the edge; soft fade-in/out at the ends.
+      var a = envelope * (0.35 + 0.65 * p);
+      if (p < 0.05) a *= p / 0.05;
+      if (p > 0.9) a *= (1 - p) / 0.1;
+
+      paint
+        ..color = s.color.withValues(alpha: a.clamp(0.0, 1.0))
+        ..strokeWidth = s.width * (0.6 + 1.4 * p);
+      canvas.drawLine(dir * trail, dir * lead, paint);
     }
     canvas.restore();
 
-    // A bright white-hot core blooming at light-speed centre.
-    final core = Paint()
-      ..color = const Color(0xFFFFFFFF).withValues(alpha: envelope * 0.9);
-    canvas.drawCircle(center, maxR * 0.16 * envelope, core);
+    // White-hot core: a bright radial bloom at light-speed centre.
+    final bloomR = maxR * (0.10 + 0.05 * motion) * envelope;
+    if (bloomR > 0) {
+      final bloom = Paint()
+        ..blendMode = BlendMode.plus
+        ..shader = RadialGradient(
+          colors: [
+            Colors.white.withValues(alpha: envelope),
+            Colors.white.withValues(alpha: envelope * 0.4),
+            Colors.white.withValues(alpha: 0),
+          ],
+          stops: const [0.0, 0.35, 1.0],
+        ).createShader(
+            Rect.fromCircle(center: center, radius: bloomR * 2.4));
+      canvas.drawCircle(center, bloomR * 2.4, bloom);
+      canvas.drawCircle(center, bloomR * 0.5,
+          Paint()..color = Colors.white.withValues(alpha: envelope));
+    }
   }
 
   @override
-  bool shouldRepaint(_TunnelPainter old) => old.t != t;
+  bool shouldRepaint(_HyperdrivePainter old) => old.t != t;
 }

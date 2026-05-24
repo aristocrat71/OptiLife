@@ -16,6 +16,6 @@ abstract final class TextLimits {
 /// `02-biome.md §6`).
 ///
 /// TEMP (testing only): set low so the reboot can be exercised without 100
-/// trees. 10 leaves room to test placement (ghost/dust) before the world fills.
+/// trees. 1 fires the reboot prompt immediately after the first tree.
 /// **Bump back to 100 before release.**
-const int kBiomeCapacity = 10;
+const int kBiomeCapacity = 1;
