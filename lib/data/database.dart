@@ -28,34 +28,13 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 1;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) async {
           await m.createAll();
           await _seed();
-        },
-        onUpgrade: (m, from, to) async {
-          if (from < 3) {
-            // Reset quests/day to the default 3 and clear today's cached roll
-            // so it re-rolls with the right count. (Bridges the temporary
-            // 6-quest experiment; safe to squash before release.)
-            await (update(settings)..where((t) => t.id.equals(1)))
-                .write(const SettingsCompanion(questsPerDay: Value(3)));
-            final today = dateOnly(DateTime.now());
-            await (delete(dailyQuestRolls)..where((t) => t.date.equals(today)))
-                .go();
-          }
-          if (from < 4) {
-            // Reminder time columns added for notifications.
-            await m.addColumn(settings, settings.morningReminderMin);
-            await m.addColumn(settings, settings.eveningReminderMin);
-          }
-          if (from < 5) {
-            // First-launch welcome/guide flag.
-            await m.addColumn(appState, appState.welcomeShown);
-          }
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
@@ -65,10 +44,7 @@ class AppDatabase extends _$AppDatabase {
   /// First-launch seeding (Data Models §9): singleton rows + preset quests.
   Future<void> _seed() async {
     await into(appState).insert(const AppStateCompanion(id: Value(1)));
-    // TEMP (testing only — revert to default): seed 10 quests/day to stress-test
-    // the biome (faster level-ups). Default is 3.
-    await into(settings).insert(
-        const SettingsCompanion(id: Value(1), questsPerDay: Value(10)));
+    await into(settings).insert(const SettingsCompanion(id: Value(1)));
     await batch((b) {
       b.insertAll(
         quests,

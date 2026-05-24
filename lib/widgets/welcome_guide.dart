@@ -27,7 +27,7 @@ Future<void> showWelcomeGuide(BuildContext context) async {
     context,
     icon: Icons.auto_stories_rounded,
     title: 'Welcome to OptiLife!',
-    body: 'Human lifeform detected... Initializing systems. Please go through '
+    body: 'Human lifeform detected... Please go through '
         'the visual guide which will teach you how to operate the tools '
         'available in the system.',
     primaryLabel: 'View the guide',
