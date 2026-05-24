@@ -49,6 +49,7 @@ dependencies:
   flutter_local_notifications: ^18.0.1 # daily reminders
   timezone: ^0.9.4 # zoned scheduling for reminders
   flutter_timezone: ^3.0.1 # device IANA timezone for tz.local
+  url_launcher: ^6.3.0 # open the online guide
 
 dev_dependencies:
   flutter_test:

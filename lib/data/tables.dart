@@ -21,6 +21,8 @@ class AppState extends Table {
   TextColumn get pendingTreeCategory =>
       textEnum<QuestCategory>().nullable()();
   DateTimeColumn get lastRerollDate => dateTime().nullable()();
+  // True once the first-launch welcome/guide prompt has been shown.
+  BoolColumn get welcomeShown => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().clientDefault(DateTime.now)();
   DateTimeColumn get lastModified => dateTime().clientDefault(DateTime.now)();
 

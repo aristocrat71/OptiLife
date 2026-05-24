@@ -28,7 +28,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -51,6 +51,10 @@ class AppDatabase extends _$AppDatabase {
             // Reminder time columns added for notifications.
             await m.addColumn(settings, settings.morningReminderMin);
             await m.addColumn(settings, settings.eveningReminderMin);
+          }
+          if (from < 5) {
+            // First-launch welcome/guide flag.
+            await m.addColumn(appState, appState.welcomeShown);
           }
         },
         beforeOpen: (details) async {
@@ -268,6 +272,11 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> setNotificationsEnabled(bool v) => _patchSettings(
       SettingsCompanion(notificationsEnabled: Value(v)));
+
+  Future<void> setWelcomeShown(bool v) =>
+      (update(appState)..where((t) => t.id.equals(1))).write(
+          AppStateCompanion(
+              welcomeShown: Value(v), lastModified: Value(DateTime.now())));
 
   Future<void> setMorningReminderMin(int min) => _patchSettings(
       SettingsCompanion(morningReminderMin: Value(min.clamp(0, 1439))));
