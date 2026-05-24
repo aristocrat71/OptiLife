@@ -32,9 +32,19 @@ class _SideQuestPageState extends ConsumerState<SideQuestPage> {
     });
   }
 
-  void _snack(String msg) => ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(msg), duration: AppMotion.fill * 3));
+  void _snack(String msg, {IconData? icon}) =>
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Row(children: [
+            if (icon != null) ...[
+              Icon(icon, size: 18, color: Colors.white),
+              const SizedBox(width: 10),
+            ],
+            Expanded(child: Text(msg)),
+          ]),
+          duration: AppMotion.fill * 3,
+        ));
 
   Future<void> _onMark(String questId) async {
     final outcome =
@@ -53,7 +63,8 @@ class _SideQuestPageState extends ConsumerState<SideQuestPage> {
   Future<void> _onUndo(String questId) async {
     final outcome = await ref.read(gameRepositoryProvider).unmarkQuest(questId);
     if (outcome == ActionOutcome.leveledDown) {
-      _snack('🍂 Level down — newest tree removed.');
+      _snack('Level down — newest tree removed.',
+          icon: Icons.trending_down_rounded);
     } else if (outcome == ActionOutcome.blockedNoEnergy) {
       _snack('Life energy already at 0.');
     }
@@ -61,13 +72,17 @@ class _SideQuestPageState extends ConsumerState<SideQuestPage> {
 
   Future<void> _onReroll() async {
     final r = await ref.read(gameRepositoryProvider).reroll();
-    _snack(switch (r) {
-      RerollOutcome.success => '🎲 Rerolled!',
-      RerollOutcome.alreadyUsedToday => 'Come back tomorrow — 1 reroll a day.',
-      RerollOutcome.completionExists => 'Unmark today\'s quests to reroll.',
-      RerollOutcome.notEnoughLe => 'Need 10⚡ in this level to reroll.',
-      RerollOutcome.blocked => 'Place your tree first.',
-    });
+    final (String msg, IconData? icon) = switch (r) {
+      RerollOutcome.success => ('Rerolled!', Icons.casino_rounded),
+      RerollOutcome.alreadyUsedToday =>
+        ('Come back tomorrow — 1 reroll a day.', null),
+      RerollOutcome.completionExists =>
+        ('Unmark today\'s quests to reroll.', null),
+      RerollOutcome.notEnoughLe =>
+        ('Need 10 energy in this level to reroll.', Icons.bolt),
+      RerollOutcome.blocked => ('Place your tree first.', null),
+    };
+    _snack(msg, icon: icon);
   }
 
   @override
@@ -104,7 +119,8 @@ class _SideQuestPageState extends ConsumerState<SideQuestPage> {
               error: (e, _) => Text('$e', style: AppType.body),
               data: (list) => list.isEmpty
                   ? _empty(
-                      const Text('🌱', style: TextStyle(fontSize: 44)),
+                      const Icon(Icons.eco_rounded,
+                          size: 44, color: AppColors.biomeGreen),
                       isPast
                           ? 'No quests were rolled this day.'
                           : 'No active quests — add some in the Workshop.',

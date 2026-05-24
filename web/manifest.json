@@ -1,11 +1,11 @@
 {
-    "name": "optilife",
-    "short_name": "optilife",
+    "name": "OptiLife",
+    "short_name": "OptiLife",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#FFF7EC",
     "theme_color": "#7C4DFF",
-    "description": "A new Flutter project.",
+    "description": "Level up your life, one quest at a time.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

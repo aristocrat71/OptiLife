@@ -74,8 +74,16 @@ class QuestCard extends StatelessWidget {
 
   Widget _action(Color color, bool done) {
     if (readOnly) {
-      return Text(done ? '✓ done' : '— not done',
-          style: AppType.caption.copyWith(color: AppColors.textMuted));
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(done ? Icons.check_rounded : Icons.remove_rounded,
+              size: 14, color: AppColors.textMuted),
+          const SizedBox(width: 4),
+          Text(done ? 'done' : 'not done',
+              style: AppType.caption.copyWith(color: AppColors.textMuted)),
+        ],
+      );
     }
     if (done) {
       // "Completed" label + a small "Not done?" undo button beside it.

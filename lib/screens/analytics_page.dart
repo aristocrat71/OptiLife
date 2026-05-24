@@ -301,14 +301,16 @@ class _Body extends StatelessWidget {
             Expanded(
               child: _StatCard(
                 value: 'Lv ${stats.level}',
-                sub: '${stats.lifetimeLe}⚡ lifetime',
+                sub: '${stats.lifetimeLe} lifetime',
+                subIcon: Icons.bolt,
                 accent: AppColors.popPurple,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _StatCard(
-                value: '${stats.dayStreak}🔥',
+                value: '${stats.dayStreak}',
+                valueIcon: Icons.local_fire_department_rounded,
                 sub: stats.dayStreak == 1 ? 'day streak' : 'days streak',
                 accent: AppColors.popCoral,
               ),
@@ -316,7 +318,8 @@ class _Body extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _StatCard(
-                value: '${stats.treesNow}🌳',
+                value: '${stats.treesNow}',
+                valueIcon: Icons.park_rounded,
                 sub: '${stats.biomesCompleted} Biome'
                     '${stats.biomesCompleted == 1 ? '' : 's'} Completed',
                 accent: AppColors.biomeGreen,
@@ -417,11 +420,18 @@ class _WindowToggle extends StatelessWidget {
 }
 
 class _StatCard extends StatelessWidget {
-  const _StatCard(
-      {required this.value, required this.sub, required this.accent});
+  const _StatCard({
+    required this.value,
+    required this.sub,
+    required this.accent,
+    this.valueIcon,
+    this.subIcon,
+  });
   final String value;
   final String sub;
   final Color accent;
+  final IconData? valueIcon; // shown beside the big value
+  final IconData? subIcon; // shown before the sub line
 
   @override
   Widget build(BuildContext context) {
@@ -438,15 +448,35 @@ class _StatCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           FittedBox(
-            child: Text(value,
-                style: AppType.display.copyWith(fontSize: 22)),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(value, style: AppType.display.copyWith(fontSize: 22)),
+                if (valueIcon != null) ...[
+                  const SizedBox(width: 4),
+                  Icon(valueIcon, size: 20, color: accent),
+                ],
+              ],
+            ),
           ),
           const SizedBox(height: 2),
-          Text(sub,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppType.caption.copyWith(color: AppColors.textMuted)),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (subIcon != null) ...[
+                Icon(subIcon, size: 13, color: AppColors.energy),
+                const SizedBox(width: 3),
+              ],
+              Flexible(
+                child: Text(sub,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style:
+                        AppType.caption.copyWith(color: AppColors.textMuted)),
+              ),
+            ],
+          ),
         ],
       ),
     );

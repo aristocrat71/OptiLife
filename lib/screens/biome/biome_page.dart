@@ -132,7 +132,7 @@ class _BiomePageState extends ConsumerState<BiomePage> {
         data.buffer.asUint8List(),
         name: 'optilife_biome_${DateTime.now().millisecondsSinceEpoch}',
       );
-      _toast('Saved to gallery 📸');
+      _toast('Saved to gallery', icon: Icons.photo_camera_rounded);
     } on GalException catch (_) {
       _toast("Couldn't save — gallery access denied");
     } catch (_) {
@@ -140,11 +140,19 @@ class _BiomePageState extends ConsumerState<BiomePage> {
     }
   }
 
-  void _toast(String msg) {
+  void _toast(String msg, {IconData? icon}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(msg)));
+      ..showSnackBar(SnackBar(
+        content: Row(children: [
+          if (icon != null) ...[
+            Icon(icon, size: 18, color: Colors.white),
+            const SizedBox(width: 10),
+          ],
+          Expanded(child: Text(msg)),
+        ]),
+      ));
   }
 
   @override
@@ -272,8 +280,15 @@ class _PlacementBanner extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('🌳 ${_label(category)}',
-            style: AppType.label.copyWith(fontSize: 14, color: color)),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.park_rounded, size: 16, color: color),
+            const SizedBox(width: 5),
+            Text(_label(category),
+                style: AppType.label.copyWith(fontSize: 14, color: color)),
+          ],
+        ),
         const SizedBox(height: 3),
         Text('Tap a spot in your biome',
             style: AppType.caption.copyWith(color: AppColors.ink)),
@@ -321,7 +336,10 @@ class _WorldHud extends StatelessWidget {
                     painter: _CapacityRingPainter(treeCount / kBiomeCapacity)),
               ),
               const SizedBox(width: 7),
-              Text('🌳 $treeCount/$kBiomeCapacity',
+              const Icon(Icons.park_rounded,
+                  size: 14, color: AppColors.biomeGreen),
+              const SizedBox(width: 4),
+              Text('$treeCount/$kBiomeCapacity',
                   style: AppType.label.copyWith(fontSize: 13)),
             ],
           ),
@@ -440,7 +458,7 @@ class _EmptyBiome extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('🌱', style: TextStyle(fontSize: 52)),
+            const Icon(Icons.eco_rounded, size: 52, color: AppColors.biomeGreen),
             const SizedBox(height: 14),
             Text(
               'Earn a level and plant your first tree!',

@@ -1,0 +1,10 @@
+# Copy this file to `android/key.properties` (which is gitignored) and fill in
+# your real values. Used by android/app/build.gradle.kts to sign release builds.
+#
+# Generate the keystore first (see README / the keytool command), then point
+# storeFile at its absolute path.
+
+storePassword=your-store-password
+keyPassword=your-key-password
+keyAlias=upload
+storeFile=/absolute/path/to/optilife-release.jks

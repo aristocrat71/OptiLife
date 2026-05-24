@@ -424,8 +424,12 @@ class _HabitChip extends ConsumerWidget {
     } else if (outcome == ActionOutcome.leveledDown) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(
-            const SnackBar(content: Text('🍂 Level down — newest tree removed.')));
+        ..showSnackBar(const SnackBar(
+            content: Row(children: [
+          Icon(Icons.trending_down_rounded, size: 18, color: Colors.white),
+          SizedBox(width: 10),
+          Expanded(child: Text('Level down — newest tree removed.')),
+        ])));
     } else if (outcome == ActionOutcome.blockedNoEnergy) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
