@@ -41,8 +41,12 @@ class JournalPage extends ConsumerWidget {
     final isFuture = ref.watch(isFutureProvider);
 
     return DayPager(
-      padding: const EdgeInsets.fromLTRB(
-          AppSpace.screenGutter, 184, AppSpace.screenGutter, 24),
+      // Reserve the keyboard's height at the bottom so the editable region ends
+      // at the keyboard's upper edge (the shell keeps resizeToAvoidBottomInset
+      // off, so we account for the inset here). Flutter then auto-scrolls the
+      // entry to keep the caret above the keyboard.
+      padding: EdgeInsets.fromLTRB(AppSpace.screenGutter, 184,
+          AppSpace.screenGutter, 24 + MediaQuery.of(context).viewInsets.bottom),
       children: [
         if (isFuture)
           Expanded(child: _futureEmpty(ref))
