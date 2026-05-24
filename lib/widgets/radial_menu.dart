@@ -9,6 +9,9 @@ import 'pop_tappable.dart';
 /// page. [AppShell] pushes Settings when [showRadialMenu] returns this.
 const kRadialSettings = -2;
 
+/// Sentinel result for the Analytics ("Stats") petal — also a pushed route.
+const kRadialAnalytics = -3;
+
 /// Opens the circular radial menu from the central nav. Returns the chosen
 /// PageView index (0=Biome, 1=SQ, 2=Tasks, 3=Journal), [kRadialSettings] for
 /// Settings, or null if dismissed.
@@ -34,14 +37,12 @@ Future<int?> showRadialMenu(BuildContext context) {
 }
 
 class _Petal {
-  const _Petal(this.label, this.icon, this.color, this.index, this.angle,
-      {this.enabled = true});
+  const _Petal(this.label, this.icon, this.color, this.index, this.angle);
   final String label;
   final IconData icon;
   final Color color;
-  final int index; // PageView index, or -1 for non-page actions
+  final int index; // PageView index, or a kRadial* sentinel for pushed routes
   final double angle; // degrees, y-down
-  final bool enabled;
 }
 
 class _RadialMenu extends StatelessWidget {
@@ -62,8 +63,8 @@ class _RadialMenu extends StatelessWidget {
       _Petal('HJ', Icons.menu_book_rounded, AppColors.popTeal, 3, 78),
       _Petal('Set', Icons.settings_rounded, Color(0xFF3A3450),
           kRadialSettings, 54),
-      _Petal('Stats', Icons.bar_chart_rounded, AppColors.hazeDeep, -1, 30,
-          enabled: false),
+      _Petal('Stats', Icons.bar_chart_rounded, AppColors.catNight,
+          kRadialAnalytics, 30),
     ];
 
     return Stack(
@@ -86,23 +87,19 @@ class _PetalButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: petal.enabled ? 1 : 0.45,
-      child: PopTappable(
-        onTap:
-            petal.enabled ? () => Navigator.of(context).pop(petal.index) : null,
-        child: Container(
-          width: size,
-          height: size,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: petal.color,
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.ink, width: 2.5),
-            boxShadow: AppShadows.card,
-          ),
-          child: Icon(petal.icon, color: Colors.white, size: 26),
+    return PopTappable(
+      onTap: () => Navigator.of(context).pop(petal.index),
+      child: Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: petal.color,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.ink, width: 2.5),
+          boxShadow: AppShadows.card,
         ),
+        child: Icon(petal.icon, color: Colors.white, size: 26),
       ),
     );
   }

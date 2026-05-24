@@ -75,6 +75,7 @@ flutter:
     - assets/icons/
     - assets/illustrations/
     - assets/trees/
+    - assets/icon/app_icon.svg
 
   fonts:
     - family: Fredoka

@@ -9,6 +9,7 @@ import '../widgets/pop_calendar.dart';
 import '../widgets/radial_menu.dart';
 import '../widgets/shell_controls.dart';
 import 'biome/biome_page.dart';
+import 'analytics_page.dart';
 import 'journal_page.dart';
 import 'settings_page.dart';
 import 'side_quest_page.dart';
@@ -38,6 +39,9 @@ class _AppShellState extends ConsumerState<AppShell> {
     if (i == kRadialSettings) {
       Navigator.of(context)
           .push(MaterialPageRoute(builder: (_) => const SettingsPage()));
+    } else if (i == kRadialAnalytics) {
+      Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => const AnalyticsPage()));
     } else {
       _goToPage(i);
     }

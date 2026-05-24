@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../state/app_providers.dart';
 import '../theme/theme.dart';
@@ -170,8 +171,9 @@ class SettingsPage extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.bolt, size: 40, color: AppColors.energy),
-                const SizedBox(height: 8),
+                SvgPicture.asset(AppAssets.appIconMaster,
+                    width: 56, height: 56),
+                const SizedBox(height: 10),
                 Text('OptiLife', style: AppType.display.copyWith(fontSize: 26)),
                 const SizedBox(height: 4),
                 Text('Version 1.0.0',
@@ -181,6 +183,12 @@ class SettingsPage extends ConsumerWidget {
                 Text('Level up your life, one quest at a time.',
                     textAlign: TextAlign.center,
                     style: AppType.body.copyWith(color: AppColors.textMuted)),
+                const SizedBox(height: 14),
+                Text('Dreamy · Projekt Dreamscape',
+                    textAlign: TextAlign.center,
+                    style: AppType.caption.copyWith(
+                        color: AppColors.textMuted,
+                        fontWeight: FontWeight.w600)),
               ],
             ),
           ),

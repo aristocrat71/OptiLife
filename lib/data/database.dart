@@ -121,6 +121,20 @@ class AppDatabase extends _$AppDatabase {
         ..orderBy([(t) => OrderingTerm(expression: t.plantedAt)]))
       .watch();
 
+  // ── analytics history (whole-table watches; aggregated client-side) ──
+  Stream<List<QuestCompletion>> watchAllQuestCompletions() =>
+      (select(questCompletions)
+            ..orderBy([(t) => OrderingTerm(expression: t.date)]))
+          .watch();
+
+  Stream<List<HabitLog>> watchAllHabitLogs() => (select(habitLogs)
+        ..orderBy([(t) => OrderingTerm(expression: t.date)]))
+      .watch();
+
+  Stream<List<DailyQuestRoll>> watchAllRolls() => (select(dailyQuestRolls)
+        ..orderBy([(t) => OrderingTerm(expression: t.date)]))
+      .watch();
+
   /// Workshop quest list, **filtered in SQL** (not client-side): optional title/
   /// description search + optional category. Shows all presets (active or not,
   /// so they can be toggled back on) plus active user quests; deleted user
