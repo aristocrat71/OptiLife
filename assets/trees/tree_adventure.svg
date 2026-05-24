@@ -1,7 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="62" height="84" viewBox="0 0 62 84">
-  <!-- PLACEHOLDER: adventure = wild, untamed tree. Base = (31,82). Replace in art pass. -->
-  <ellipse cx="31" cy="80" rx="18" ry="5" fill="#1A1626" opacity="0.16"/>
-  <rect x="27" y="52" width="8" height="26" rx="3" fill="#8A5A32" stroke="#1A1626" stroke-width="2.5"/>
-  <path d="M31 8 C46 16 48 38 38 48 C42 32 32 24 31 8Z" fill="#FF8A3D" stroke="#1A1626" stroke-width="2.6" stroke-linejoin="round"/>
-  <path d="M31 8 C16 16 14 38 24 48 C20 32 30 24 31 8Z" fill="#FFA85E" stroke="#1A1626" stroke-width="2.6" stroke-linejoin="round"/>
+  <!-- adventure = layered pine (the trail). Base = (31,82) bottom-center. -->
+  <defs>
+    <linearGradient id="adv" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#FFB37A"/>
+      <stop offset="0.5" stop-color="#FF8A3D"/>
+      <stop offset="1" stop-color="#E5731F"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="31" cy="81" rx="13" ry="3.5" fill="#1A1626" opacity="0.12"/>
+  <path d="M28 82 L28.5 60 Q28.5 57 31 57 Q33.5 57 33.5 60 L34 82 Z" fill="#8B5A2B" stroke="#1A1626" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- tiers (bottom to top), each outlined for the stacked-pine look -->
+  <polygon points="8,64 54,64 31,40" fill="url(#adv)" stroke="#1A1626" stroke-width="2.5" stroke-linejoin="round"/>
+  <polygon points="12,48 50,48 31,26" fill="url(#adv)" stroke="#1A1626" stroke-width="2.5" stroke-linejoin="round"/>
+  <polygon points="15,33 47,33 31,12" fill="url(#adv)" stroke="#1A1626" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- summit star -->
+  <path d="M31 4 L33 9 L38 9 L34 12 L36 17 L31 14 L26 17 L28 12 L24 9 L29 9 Z" fill="#FFD23F" stroke="#1A1626" stroke-width="1.6" stroke-linejoin="round"/>
 </svg>

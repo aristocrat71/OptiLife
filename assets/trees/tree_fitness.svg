@@ -1,8 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="62" height="84" viewBox="0 0 62 84">
-  <!-- PLACEHOLDER: fitness = strong oak. Base/contact point = (31,82) bottom-center. Replace in art pass. -->
-  <ellipse cx="31" cy="80" rx="18" ry="5" fill="#1A1626" opacity="0.16"/>
-  <rect x="27" y="50" width="8" height="28" rx="3" fill="#8A5A32" stroke="#1A1626" stroke-width="2.5"/>
-  <circle cx="31" cy="30" r="22" fill="#FF4D6D" stroke="#1A1626" stroke-width="2.8"/>
-  <circle cx="19" cy="38" r="13" fill="#FF4D6D" stroke="#1A1626" stroke-width="2.8"/>
-  <circle cx="43" cy="38" r="13" fill="#FF4D6D" stroke="#1A1626" stroke-width="2.8"/>
+  <!-- fitness = strong, broad oak. Base = (31,82) bottom-center. -->
+  <ellipse cx="31" cy="81" rx="16" ry="3.5" fill="#1A1626" opacity="0.12"/>
+  <path d="M26 82 L26.5 52 Q26.5 47 31 47 Q35.5 47 35.5 52 L36 82 Z" fill="#8B5A2B" stroke="#1A1626" stroke-width="3" stroke-linejoin="round"/>
+  <g fill="#1A1626">
+    <circle cx="31" cy="29" r="23"/>
+    <circle cx="15" cy="39" r="12.5"/>
+    <circle cx="47" cy="39" r="12.5"/>
+  </g>
+  <g fill="#FF4D6D">
+    <circle cx="31" cy="29" r="20.5"/>
+    <circle cx="15" cy="39" r="10"/>
+    <circle cx="47" cy="39" r="10"/>
+  </g>
+  <g fill="#E0344F">
+    <circle cx="43" cy="40" r="8"/>
+    <circle cx="34" cy="43" r="6"/>
+  </g>
+  <g fill="#FF8099">
+    <circle cx="22" cy="21" r="6.5"/>
+    <circle cx="16" cy="33" r="4"/>
+  </g>
+  <!-- berries -->
+  <g fill="#FFD23F" stroke="#1A1626" stroke-width="1.4">
+    <circle cx="26" cy="36" r="2.6"/>
+    <circle cx="38" cy="30" r="2.6"/>
+    <circle cx="31" cy="44" r="2.6"/>
+  </g>
 </svg>
