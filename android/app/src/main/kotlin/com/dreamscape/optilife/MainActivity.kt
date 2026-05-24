@@ -1,4 +1,4 @@
-package com.example.optilife
+package com.dreamscape.optilife
 
 import io.flutter.embedding.android.FlutterActivity
 

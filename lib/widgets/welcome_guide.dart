@@ -5,8 +5,7 @@ import '../theme/theme.dart';
 import 'app_tutorial.dart';
 import 'pop_tappable.dart';
 
-/// Online how-to-use guide. TODO: point at the real manual page once the
-/// marketing site is built — placeholder for now.
+/// Online how-to-use guide (the optilife-web manual page).
 const kGuideUrl = 'https://optilife-web.netlify.app/guide';
 
 /// Opens the guide in the external browser. Shows a snackbar if it can't.
