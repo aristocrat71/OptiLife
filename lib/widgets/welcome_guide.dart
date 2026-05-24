@@ -7,7 +7,7 @@ import 'pop_tappable.dart';
 
 /// Online how-to-use guide. TODO: point at the real manual page once the
 /// marketing site is built — placeholder for now.
-const kGuideUrl = 'https://google.com/hello';
+const kGuideUrl = 'https://optilife-web.netlify.app/guide';
 
 /// Opens the guide in the external browser. Shows a snackbar if it can't.
 Future<void> openGuide(BuildContext context) async {
