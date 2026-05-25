@@ -489,7 +489,16 @@ class _HabitChip extends ConsumerWidget {
     );
 
     if (readOnly) return chip;
-    return PopTappable(onTap: () => _toggle(context, ref), child: chip);
+    return PopTappable(
+      onTap: () => _toggle(context, ref),
+      onLongPress: () => openHabitDetail(
+        context,
+        habit: habit,
+        logged: _logged,
+        onMark: () => _toggle(context, ref),
+      ),
+      child: chip,
+    );
   }
 
   /// The check (good) / shield (bad) dot — outline when unlogged, filled
@@ -514,6 +523,153 @@ class _HabitChip extends ConsumerWidget {
       child: Icon(icon,
           size: 15,
           color: _logged ? Colors.white : AppColors.mutedInk),
+    );
+  }
+}
+
+/// Press-and-hold detail for a habit: surfaces the (otherwise hidden)
+/// description and offers Close / Mark, mirroring the editor sheet's transition.
+Future<void> openHabitDetail(
+  BuildContext context, {
+  required Habit habit,
+  required bool logged,
+  required VoidCallback onMark,
+}) {
+  return showGeneralDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'Habit',
+    barrierColor: AppColors.ink.withValues(alpha: AppZ.scrim),
+    transitionDuration: AppMotion.pop,
+    pageBuilder: (_, _, _) =>
+        _HabitDetailSheet(habit: habit, logged: logged, onMark: onMark),
+    transitionBuilder: (_, anim, _, child) {
+      final curved = CurvedAnimation(parent: anim, curve: AppMotion.curvePop);
+      return FadeTransition(
+        opacity: anim,
+        child: ScaleTransition(
+          scale: Tween(begin: 0.7, end: 1.0).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
+class _HabitDetailSheet extends StatelessWidget {
+  const _HabitDetailSheet({
+    required this.habit,
+    required this.logged,
+    required this.onMark,
+  });
+
+  final Habit habit;
+  final bool logged;
+  final VoidCallback onMark;
+
+  @override
+  Widget build(BuildContext context) {
+    final isGood = habit.type == HabitType.good;
+    final typeColor = isGood ? AppColors.positive : AppColors.negative;
+    final desc = habit.description?.trim();
+    final hasDesc = desc != null && desc.isNotEmpty;
+
+    return Center(
+      child: SingleChildScrollView(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 32),
+            padding: const EdgeInsets.fromLTRB(22, 20, 22, 22),
+            decoration: popSurface(
+                fill: AppColors.paper, radius: AppRadii.lg, stroke: 3),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: typeColor,
+                    borderRadius: AppRadii.r(AppRadii.pill),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(isGood ? Icons.check_rounded : Icons.shield_rounded,
+                          size: 13, color: Colors.white),
+                      const SizedBox(width: 4),
+                      Text(isGood ? 'GOOD HABIT' : 'BAD HABIT',
+                          style: AppType.caption
+                              .copyWith(color: Colors.white, fontSize: 10)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(habit.title,
+                    style: AppType.body
+                        .copyWith(fontSize: 20, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 10),
+                Text(
+                  hasDesc ? desc : 'No description added.',
+                  style: AppType.body.copyWith(
+                    fontSize: 14,
+                    color: AppColors.textMuted,
+                    fontStyle: hasDesc ? FontStyle.normal : FontStyle.italic,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: PopTappable(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          alignment: Alignment.center,
+                          decoration: popSurface(
+                              fill: AppColors.paper,
+                              radius: AppRadii.md,
+                              stroke: 2,
+                              shadow: false),
+                          child: Text('CLOSE',
+                              style: AppType.label.copyWith(fontSize: 15)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: PopTappable(
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          onMark();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          alignment: Alignment.center,
+                          decoration: popSurface(
+                              fill: logged
+                                  ? AppColors.surfaceSunk
+                                  : AppColors.popPurple,
+                              radius: AppRadii.md,
+                              stroke: 2.5),
+                          child: Text(logged ? 'UNMARK' : 'MARK',
+                              style: AppType.label.copyWith(
+                                  fontSize: 15,
+                                  color: logged
+                                      ? AppColors.ink
+                                      : AppColors.cream)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
