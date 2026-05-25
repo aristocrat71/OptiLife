@@ -1075,7 +1075,7 @@ class _HabitSheetState extends ConsumerState<_HabitSheet> {
                           color: AppColors.positive,
                           icon: Icons.check_rounded,
                           label: 'Good',
-                          sub: 'log when done',
+                          sub: 'Build',
                           onTap: () => setState(() => _type = HabitType.good),
                         ),
                       ),
@@ -1086,7 +1086,7 @@ class _HabitSheetState extends ConsumerState<_HabitSheet> {
                           color: AppColors.negative,
                           icon: Icons.shield_outlined,
                           label: 'Bad',
-                          sub: 'log when avoided',
+                          sub: 'Avoid',
                           onTap: () => setState(() => _type = HabitType.bad),
                         ),
                       ),
@@ -1221,4 +1221,3 @@ class _HabitSheetState extends ConsumerState<_HabitSheet> {
     );
   }
 }
-
