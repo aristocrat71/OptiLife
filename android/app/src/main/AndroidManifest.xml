@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Update check: query the GitHub Releases API on launch (app_update.dart).
+         Needed in the main manifest so release builds can reach the network. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- Photo mode: save biome screenshots to the gallery (gal). API >= 30 uses
          scoped storage and needs no permission; older devices need this. -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../services/app_update.dart';
 import '../state/app_providers.dart'; // re-exports dateOnly + le_math helpers
 import '../theme/theme.dart';
 import '../widgets/pop_calendar.dart';
@@ -31,18 +32,25 @@ class _AppShellState extends ConsumerState<AppShell> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowWelcome());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _runStartupFlow());
   }
 
-  /// First launch after install: show the guide prompt once, then mark it seen
-  /// (so it never reappears, whether or not they view the guide).
-  Future<void> _maybeShowWelcome() async {
+  /// On launch: first-ever run shows the welcome/guide prompt (a fresh install
+  /// is already the latest build, so we skip the update check that time);
+  /// every later launch checks GitHub for a newer release instead.
+  Future<void> _runStartupFlow() async {
     final db = ref.read(databaseProvider);
     final app = await db.watchAppState().first;
-    if (!mounted || app.welcomeShown) return;
-    await db.setWelcomeShown(true);
     if (!mounted) return;
-    await showWelcomeGuide(context);
+
+    if (!app.welcomeShown) {
+      await db.setWelcomeShown(true);
+      if (!mounted) return;
+      await showWelcomeGuide(context);
+      return;
+    }
+
+    await maybePromptForUpdate(context);
   }
 
   @override
