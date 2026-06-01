@@ -50,6 +50,8 @@ dependencies:
   timezone: ^0.9.4 # zoned scheduling for reminders
   flutter_timezone: ^3.0.1 # device IANA timezone for tz.local
   url_launcher: ^6.3.0 # open the online guide
+  package_info_plus: ^10.1.0
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:
