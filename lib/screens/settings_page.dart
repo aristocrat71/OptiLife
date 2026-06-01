@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../data/database.dart';
 import '../services/notifications.dart';
@@ -181,7 +182,9 @@ class SettingsPage extends ConsumerWidget {
         child: Column(children: children),
       );
 
-  static void _showAbout(BuildContext context) {
+  static Future<void> _showAbout(BuildContext context) async {
+    final info = await PackageInfo.fromPlatform();
+    if (!context.mounted) return;
     showGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
@@ -204,7 +207,7 @@ class SettingsPage extends ConsumerWidget {
                 const SizedBox(height: 10),
                 Text('OptiLife', style: AppType.display.copyWith(fontSize: 26)),
                 const SizedBox(height: 4),
-                Text('Version 1.0.0',
+                Text('Version ${info.version}',
                     style:
                         AppType.caption.copyWith(color: AppColors.textMuted)),
                 const SizedBox(height: 12),
